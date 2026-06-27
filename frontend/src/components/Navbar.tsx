@@ -1,0 +1,64 @@
+"use client";
+import { useRouter } from "next/navigation";
+
+interface NavbarProps {
+  activePage?: "home" | "shop" | "customizer" | "contact";
+}
+
+export default function Navbar({ activePage = "home" }: NavbarProps) {
+  const router = useRouter();
+
+  const linkStyle = (page: string): React.CSSProperties =>
+    activePage === page ? s.linkActive : s.link;
+
+  return (
+    <nav style={s.nav}>
+      <style>{css}</style>
+
+      <div style={s.logo} onClick={() => router.push("/home")}>Lavender</div>
+
+      <div style={s.links}>
+        <a style={linkStyle("home")} onClick={() => router.push("/home")} href="#">Home</a>
+        <a style={linkStyle("shop")} onClick={() => router.push("/shop")} href="#">Shop</a>
+        <a style={linkStyle("customizer")} onClick={() => router.push("/customizer")} href="#">Customizer</a>
+        <a style={linkStyle("contact")} href="#">Contact</a>
+      </div>
+
+      <div style={s.searchWrap}>
+        <svg style={s.searchIcon} xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a090c0" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input placeholder="Search collection..." style={s.searchInput} className="lav-nav-search" />
+      </div>
+
+      <div style={s.icons}>
+        <svg style={s.iconSvg} xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#5b2d8e" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+        </svg>
+        <svg style={s.iconSvg} xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#5b2d8e" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/>
+        </svg>
+        <svg style={s.iconSvg} onClick={() => router.push("/auth")} xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#5b2d8e" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+        </svg>
+      </div>
+    </nav>
+  );
+}
+
+const s: { [key: string]: React.CSSProperties } = {
+  nav: { display: "flex", alignItems: "center", gap: 32, padding: "12px 48px", borderBottom: "1px solid #f0eaf8", backgroundColor: "#fff", position: "sticky", top: 0, zIndex: 100 },
+  logo: { fontFamily: "'Georgia', serif", fontSize: 22, fontWeight: 700, color: "#5b2d8e", fontStyle: "italic", cursor: "pointer", whiteSpace: "nowrap", marginRight: 8 },
+  links: { display: "flex", gap: 28, alignItems: "center" },
+  linkActive: { fontSize: 14, fontWeight: 600, color: "#c0395a", textDecoration: "none", borderBottom: "2px solid #c0395a", paddingBottom: 2, cursor: "pointer" },
+  link: { fontSize: 14, color: "#4a4060", textDecoration: "none", cursor: "pointer", fontWeight: 400 },
+  searchWrap: { flex: 1, position: "relative", display: "flex", alignItems: "center", maxWidth: 260 },
+  searchIcon: { position: "absolute", left: 12, pointerEvents: "none" },
+  searchInput: { width: "100%", padding: "8px 16px 8px 34px", borderRadius: 50, border: "1.5px solid #e8dff5", fontSize: 13, outline: "none", fontFamily: "'Inter', sans-serif", backgroundColor: "#faf7ff", color: "#3a1260" },
+  icons: { display: "flex", gap: 18, alignItems: "center", marginLeft: "auto" },
+  iconSvg: { cursor: "pointer", display: "block" },
+};
+
+const css = `
+  .lav-nav-search:focus { border-color: #9b6fd0 !important; background: #fff !important; outline: none; }
+`;
