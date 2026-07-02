@@ -3,6 +3,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { useCart } from "@/context/CartContext";
+import { useWishlist } from "@/context/WishlistContext";
 
 const allProducts = [
   { id: 1, name: "Silk Ruffle Blouse", price: "$89.00", img: "/lav-p5.jpg", category: "Blouses", colors: ["#c8a0d0", "#e05080"], tag: "New" },
@@ -27,16 +29,24 @@ const sortOptions = ["Newest", "Price: Low to High", "Price: High to Low"];
 
 export default function ShopPage() {
   const router = useRouter();
+  const { addToCart } = useCart();
+  const { toggleWishlist, isInWishlist } = useWishlist();
   const [selectedCategory, setSelectedCategory] = useState("All Items");
   const [selectedSize, setSelectedSize] = useState("S");
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState("Newest");
   const [currentPage, setCurrentPage] = useState(1);
-  const [wishlist, setWishlist] = useState<number[]>([]);
 
-  const toggleWishlist = (id: number, e: React.MouseEvent) => {
+  const handleWishlistClick = (p: (typeof allProducts)[number], e: React.MouseEvent) => {
     e.stopPropagation();
-    setWishlist(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+    toggleWishlist({
+      id: String(p.id),
+      name: p.name,
+      price: parseFloat(p.price.replace("$", "")),
+      image: p.img,
+      badge: p.tag || undefined,
+      colorSwatch: p.colors[0],
+    });
   };
 
   const clearAll = () => {
@@ -167,9 +177,9 @@ export default function ShopPage() {
                   <button
                     style={s.wishBtn}
                     className="wish-btn"
-                    onClick={(e) => toggleWishlist(p.id, e)}
+                    onClick={(e) => handleWishlistClick(p, e)}
                   >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill={wishlist.includes(p.id) ? "#c0395a" : "none"} stroke="#c0395a" strokeWidth="2">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill={isInWishlist(String(p.id)) ? "#c0395a" : "none"} stroke="#c0395a" strokeWidth="2">
                       <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
                     </svg>
                   </button>
@@ -187,7 +197,19 @@ export default function ShopPage() {
                   <button
                     style={s.addBtn}
                     className="add-btn"
-                    onClick={e => e.stopPropagation()}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      addToCart({
+                        id: String(p.id),
+                        name: p.name,
+                        price: parseFloat(p.price.replace("$", "")),
+                        image: p.img,
+                        color: "Default",
+                        colorSwatch: p.colors[0],
+                        size: selectedSize,
+                        badge: p.tag || undefined,
+                      });
+                    }}
                   >
                     Add to Bag
                   </button>

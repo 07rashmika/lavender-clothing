@@ -1,12 +1,17 @@
 "use client";
 import { useRouter } from "next/navigation";
+import { useCart } from "@/context/CartContext";
+import { useWishlist } from "@/context/WishlistContext";
 
 interface NavbarProps {
-  activePage?: "home" | "shop" | "customizer" | "contact";
+  activePage?: "home" | "shop" | "customizer" | "contact" | "bag" | "wishlist";
 }
 
 export default function Navbar({ activePage = "home" }: NavbarProps) {
   const router = useRouter();
+  const { itemCount } = useCart();
+  const { wishlistCount } = useWishlist();
+  const isWishlistActive = activePage === "wishlist";
 
   const linkStyle = (page: string): React.CSSProperties =>
     activePage === page ? s.linkActive : s.link;
@@ -21,7 +26,7 @@ export default function Navbar({ activePage = "home" }: NavbarProps) {
         <a style={linkStyle("home")} onClick={() => router.push("/home")} href="#">Home</a>
         <a style={linkStyle("shop")} onClick={() => router.push("/shop")} href="#">Shop</a>
         <a style={linkStyle("customizer")} onClick={() => router.push("/customizer")} href="#">Customizer</a>
-        <a style={linkStyle("contact")} href="#">Contact</a>
+        <a style={linkStyle("contact")} onClick={() => router.push("/contact")} href="#">Contact</a>
       </div>
 
       <div style={s.searchWrap}>
@@ -32,12 +37,20 @@ export default function Navbar({ activePage = "home" }: NavbarProps) {
       </div>
 
       <div style={s.icons}>
-        <svg style={s.iconSvg} xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#5b2d8e" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
-        </svg>
-        <svg style={s.iconSvg} xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#5b2d8e" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/>
-        </svg>
+        <div style={s.bagWrap} onClick={() => router.push("/wishlist")}>
+          <svg style={s.iconSvg} xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill={isWishlistActive ? "#c0395a" : "none"} stroke={isWishlistActive ? "#c0395a" : "#5b2d8e"} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+          </svg>
+          {wishlistCount > 0 && <span style={s.badge}>{wishlistCount}</span>}
+        </div>
+
+        <div style={s.bagWrap} onClick={() => router.push("/bag")}>
+          <svg style={s.iconSvg} xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#5b2d8e" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/>
+          </svg>
+          {itemCount > 0 && <span style={s.badge}>{itemCount}</span>}
+        </div>
+
         <svg style={s.iconSvg} onClick={() => router.push("/auth")} xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#5b2d8e" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
           <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
         </svg>
@@ -57,6 +70,12 @@ const s: { [key: string]: React.CSSProperties } = {
   searchInput: { width: "100%", padding: "8px 16px 8px 34px", borderRadius: 50, border: "1.5px solid #e8dff5", fontSize: 13, outline: "none", fontFamily: "'Inter', sans-serif", backgroundColor: "#faf7ff", color: "#3a1260" },
   icons: { display: "flex", gap: 18, alignItems: "center", marginLeft: "auto" },
   iconSvg: { cursor: "pointer", display: "block" },
+  bagWrap: { position: "relative", cursor: "pointer", display: "flex" },
+  badge: {
+    position: "absolute", top: -8, right: -8, background: "#c0395a", color: "#fff",
+    fontSize: 10, fontWeight: 700, borderRadius: "50%", width: 16, height: 16,
+    display: "flex", alignItems: "center", justifyContent: "center",
+  },
 };
 
 const css = `

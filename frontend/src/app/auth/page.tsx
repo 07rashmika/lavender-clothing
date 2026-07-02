@@ -119,7 +119,7 @@ export default function AuthPage() {
 
 function GoogleIcon() {
   return (
-    <svg width="16" height="16" viewBox="0 0 18 18" style={{ marginRight: 8 }}>
+    <svg width="20" height="20" viewBox="0 0 18 18" style={{ marginRight: 10 }}>
       <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"/>
       <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z"/>
       <path fill="#FBBC05" d="M3.964 10.707c-.18-.54-.282-1.117-.282-1.707s.102-1.167.282-1.707V4.961H.957C.347 6.174 0 7.548 0 9s.348 2.826.957 4.039l3.007-2.332z"/>
@@ -144,8 +144,8 @@ const styles: { [key: string]: React.CSSProperties } = {
     flexShrink: 0,
   },
   brandName: {
-    position: "absolute", top: 20, left: 24, zIndex: 10,
-    color: "#fff", fontSize: 20, fontWeight: 700,
+    position: "absolute", top: 28, left: 32, zIndex: 10,
+    color: "#fff", fontSize: 24, fontWeight: 700,
     fontFamily: "'Georgia',serif", letterSpacing: 1,
   },
   heroImg: { width: "100%", height: "100%", objectFit: "cover", objectPosition: "top", display: "block" },
@@ -160,62 +160,62 @@ const styles: { [key: string]: React.CSSProperties } = {
     flexDirection: "column",
     alignItems: "center",
     justifyContent: "center",
-    padding: "0 40px",
+    padding: "0 60px",
     backgroundColor: "#fdf8f8",
     overflow: "hidden",
   },
   tabsWrapper: {
-    display: "flex", width: "100%", maxWidth: 340,
-    marginBottom: 12, borderBottom: "1.5px solid #e8dce8",
+    display: "flex", width: "100%", maxWidth: 460,
+    marginBottom: 16, borderBottom: "1.5px solid #e8dce8",
   },
-  form: { width: "100%", maxWidth: 340, display: "flex", flexDirection: "column" },
+  form: { width: "100%", maxWidth: 460, display: "flex", flexDirection: "column" },
   heading: {
-    fontSize: 20, fontWeight: 700, color: "#2d1a3a",
-    margin: "0 0 3px 0", fontFamily: "'Georgia',serif",
+    fontSize: 30, fontWeight: 700, color: "#2d1a3a",
+    margin: "0 0 6px 0", fontFamily: "'Georgia',serif",
   },
-  subheading: { fontSize: 12, color: "#888", margin: "0 0 10px 0", lineHeight: 1.4 },
+  subheading: { fontSize: 14, color: "#888", margin: "0 0 14px 0", lineHeight: 1.4 },
   label: {
-    fontSize: 12, fontWeight: 500, color: "#2d1a3a",
-    marginBottom: 4, marginTop: 7, display: "block",
+    fontSize: 13.5, fontWeight: 500, color: "#2d1a3a",
+    marginBottom: 6, marginTop: 10, display: "block",
   },
   inputWrapper: { position: "relative", display: "flex", alignItems: "center" },
-  inputIcon: { position: "absolute", left: 11, fontSize: 12, color: "#b0a0b8", pointerEvents: "none" },
+  inputIcon: { position: "absolute", left: 16, fontSize: 15, color: "#b0a0b8", pointerEvents: "none" },
   input: {
-    width: "100%", padding: "8px 36px 8px 32px",
-    borderRadius: 7, border: "1.5px solid #e8dce8",
-    backgroundColor: "#fdf3f6", fontSize: 12, color: "#2d1a3a",
+    width: "100%", padding: "12px 42px 12px 44px",
+    borderRadius: 10, border: "1.5px solid #e8dce8",
+    backgroundColor: "#fdf3f6", fontSize: 14.5, color: "#2d1a3a",
     outline: "none", boxSizing: "border-box", fontFamily: "'Inter',sans-serif",
   },
-  eyeIcon: { position: "absolute", right: 10, fontSize: 12, cursor: "pointer", color: "#b0a0b8" },
+  eyeIcon: { position: "absolute", right: 16, fontSize: 15, cursor: "pointer", color: "#b0a0b8" },
   checkLabel: {
-    display: "flex", alignItems: "center", gap: 7, fontSize: 11,
-    color: "#555", cursor: "pointer", marginTop: 7, marginBottom: 0,
+    display: "flex", alignItems: "center", gap: 9, fontSize: 13,
+    color: "#555", cursor: "pointer", marginTop: 10, marginBottom: 0,
   },
-  checkbox: { accentColor: "#c0395a", width: 13, height: 13, cursor: "pointer" },
+  checkbox: { accentColor: "#c0395a", width: 16, height: 16, cursor: "pointer" },
   primaryBtn: {
-    marginTop: 10, width: "100%", padding: "10px 0", borderRadius: 50,
+    marginTop: 16, width: "100%", padding: "14px 0", borderRadius: 50,
     background: "linear-gradient(135deg,#c0395a 0%,#a02848 100%)",
-    color: "#fff", fontSize: 13, fontWeight: 600, border: "none",
+    color: "#fff", fontSize: 15.5, fontWeight: 600, border: "none",
     cursor: "pointer", fontFamily: "'Inter',sans-serif", letterSpacing: 0.3,
   },
-  dividerRow: { display: "flex", alignItems: "center", gap: 8, margin: "10px 0" },
+  dividerRow: { display: "flex", alignItems: "center", gap: 12, margin: "16px 0" },
   dividerLine: { flex: 1, height: 1, backgroundColor: "#e8dce8" },
-  dividerText: { fontSize: 10, color: "#aaa", whiteSpace: "nowrap", letterSpacing: 0.5 },
+  dividerText: { fontSize: 12, color: "#aaa", whiteSpace: "nowrap", letterSpacing: 0.5 },
   googleBtn: {
-    width: "100%", padding: "8px 0", borderRadius: 7,
+    width: "100%", padding: "12px 0", borderRadius: 10,
     border: "1.5px solid #e8dce8", backgroundColor: "#fff",
-    fontSize: 12, fontWeight: 500, color: "#2d1a3a", cursor: "pointer",
+    fontSize: 14.5, fontWeight: 500, color: "#2d1a3a", cursor: "pointer",
     display: "flex", alignItems: "center", justifyContent: "center",
     fontFamily: "'Inter',sans-serif",
   },
   link: { color: "#c0395a", cursor: "pointer", fontWeight: 500, textDecoration: "underline" },
-  loginLink: { textAlign: "center", fontSize: 11, color: "#666", marginTop: 8 },
+  loginLink: { textAlign: "center", fontSize: 13, color: "#666", marginTop: 14 },
 };
 
 const css = `
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { overflow: hidden; }
-  .tab { flex: 1; background: none; border: none; border-bottom: 2px solid transparent; padding-bottom: 7px; font-size: 13px; cursor: pointer; font-family: 'Inter',sans-serif; transition: color 0.2s; }
+  .tab { flex: 1; background: none; border: none; border-bottom: 2px solid transparent; padding-bottom: 12px; font-size: 16px; cursor: pointer; font-family: 'Inter',sans-serif; transition: color 0.2s; }
   .tab-active { color: #c0395a; border-bottom-color: #c0395a; font-weight: 600; }
   .tab-inactive { color: #888; font-weight: 400; }
   .lav-input:focus { border-color: #c0395a !important; background: #fff !important; }
