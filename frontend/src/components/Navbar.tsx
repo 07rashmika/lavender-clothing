@@ -1,4 +1,5 @@
 "use client";
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useCart } from "@/context/CartContext";
 import { useWishlist } from "@/context/WishlistContext";
@@ -13,8 +14,32 @@ export default function Navbar({ activePage = "home" }: NavbarProps) {
   const { wishlistCount } = useWishlist();
   const isWishlistActive = activePage === "wishlist";
 
+  const [query, setQuery] = useState("");
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const linkStyle = (page: string): React.CSSProperties =>
     activePage === page ? s.linkActive : s.link;
+
+  const goToSearch = (value: string) => {
+    const trimmed = value.trim();
+    router.push(trimmed ? `/shop?search=${encodeURIComponent(trimmed)}` : "/shop");
+  };
+
+  const handleChange = (value: string) => {
+    setQuery(value);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      const trimmed = value.trim();
+      router.replace(trimmed ? `/shop?search=${encodeURIComponent(trimmed)}` : "/shop");
+    }, 400);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      goToSearch(query);
+    }
+  };
 
   return (
     <nav style={s.nav}>
@@ -30,10 +55,20 @@ export default function Navbar({ activePage = "home" }: NavbarProps) {
       </div>
 
       <div style={s.searchWrap}>
-        <svg style={s.searchIcon} xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a090c0" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <svg
+          style={{ ...s.searchIcon, pointerEvents: "auto", cursor: "pointer" }}
+          onClick={() => { if (debounceRef.current) clearTimeout(debounceRef.current); goToSearch(query); }}
+          xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a090c0" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
         </svg>
-        <input placeholder="Search collection..." style={s.searchInput} className="lav-nav-search" />
+        <input
+          placeholder="Search collection..."
+          style={s.searchInput}
+          className="lav-nav-search"
+          value={query}
+          onChange={(e) => handleChange(e.target.value)}
+          onKeyDown={handleKeyDown}
+        />
       </div>
 
       <div style={s.icons}>
@@ -66,7 +101,7 @@ const s: { [key: string]: React.CSSProperties } = {
   linkActive: { fontSize: 14, fontWeight: 600, color: "#c0395a", textDecoration: "none", borderBottom: "2px solid #c0395a", paddingBottom: 2, cursor: "pointer" },
   link: { fontSize: 14, color: "#4a4060", textDecoration: "none", cursor: "pointer", fontWeight: 400 },
   searchWrap: { flex: 1, position: "relative", display: "flex", alignItems: "center", maxWidth: 260 },
-  searchIcon: { position: "absolute", left: 12, pointerEvents: "none" },
+  searchIcon: { position: "absolute", left: 12 },
   searchInput: { width: "100%", padding: "8px 16px 8px 34px", borderRadius: 50, border: "1.5px solid #e8dff5", fontSize: 13, outline: "none", fontFamily: "'Inter', sans-serif", backgroundColor: "#faf7ff", color: "#3a1260" },
   icons: { display: "flex", gap: 18, alignItems: "center", marginLeft: "auto" },
   iconSvg: { cursor: "pointer", display: "block" },

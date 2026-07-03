@@ -1,6 +1,6 @@
 "use client";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useCart } from "@/context/CartContext";
@@ -28,7 +28,16 @@ const colorOptions = ["#f5f0e8", "#e05080", "#f5c518", "#333", "#c8a0d0"];
 const sortOptions = ["Newest", "Price: Low to High", "Price: High to Low"];
 
 export default function ShopPage() {
+  return (
+    <Suspense fallback={null}>
+      <ShopPageContent />
+    </Suspense>
+  );
+}
+
+function ShopPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { addToCart } = useCart();
   const { toggleWishlist, isInWishlist } = useWishlist();
   const [selectedCategory, setSelectedCategory] = useState("All Items");
@@ -36,6 +45,11 @@ export default function ShopPage() {
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState("Newest");
   const [currentPage, setCurrentPage] = useState(1);
+  const searchQuery = (searchParams.get("search") || "").trim().toLowerCase();
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
 
   const handleWishlistClick = (p: (typeof allProducts)[number], e: React.MouseEvent) => {
     e.stopPropagation();
@@ -55,9 +69,11 @@ export default function ShopPage() {
     setSelectedColor(null);
     setSortBy("Newest");
     setCurrentPage(1);
+    if (searchQuery) router.replace("/shop");
   };
 
   const filtered = allProducts.filter(p => {
+    if (searchQuery && !p.name.toLowerCase().includes(searchQuery)) return false;
     if (selectedCategory !== "All Items" && p.category !== selectedCategory) return false;
     if (selectedColor && !p.colors.includes(selectedColor)) return false;
     return true;
@@ -144,7 +160,11 @@ export default function ShopPage() {
         {/* MAIN */}
         <main style={s.main}>
           <div style={s.topBar}>
-            <p style={s.resultCount}>Showing {paginated.length} results of {sorted.length} items</p>
+            <p style={s.resultCount}>
+              {searchQuery
+                ? `Showing ${paginated.length} results for "${searchParams.get("search")}"`
+                : `Showing ${paginated.length} results of ${sorted.length} items`}
+            </p>
             <div style={s.sortWrap}>
               <span style={s.sortLabel}>Sort by:</span>
               <select
@@ -158,6 +178,13 @@ export default function ShopPage() {
           </div>
 
           {/* Product Grid */}
+          {paginated.length === 0 ? (
+            <div style={{ textAlign: "center", padding: "60px 0" }}>
+              <p style={{ fontSize: 15, color: "#888" }}>
+                No products found{searchQuery ? ` for "${searchParams.get("search")}"` : ""}. Try a different search or filter.
+              </p>
+            </div>
+          ) : (
           <div style={s.grid}>
             {paginated.map(p => (
               <div
@@ -217,6 +244,7 @@ export default function ShopPage() {
               </div>
             ))}
           </div>
+          )}
 
           {/* Pagination */}
           <div style={s.pagination}>
