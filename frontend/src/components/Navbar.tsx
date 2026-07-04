@@ -3,6 +3,7 @@ import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useCart } from "@/context/CartContext";
 import { useWishlist } from "@/context/WishlistContext";
+import { useAuth } from "@/context/AuthContext";
 
 interface NavbarProps {
   activePage?: "home" | "shop" | "customizer" | "contact" | "bag" | "wishlist";
@@ -12,10 +13,22 @@ export default function Navbar({ activePage = "home" }: NavbarProps) {
   const router = useRouter();
   const { itemCount } = useCart();
   const { wishlistCount } = useWishlist();
+  const { user, signOut } = useAuth();
   const isWishlistActive = activePage === "wishlist";
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
 
   const [query, setQuery] = useState("");
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleSignOut = async () => {
+    setUserMenuOpen(false);
+    await signOut();
+    router.push("/auth");
+  };
+
+  const userInitials = user?.user_metadata?.full_name
+    ? user.user_metadata.full_name.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2)
+    : user?.email?.[0]?.toUpperCase() ?? "?";
 
   const linkStyle = (page: string): React.CSSProperties =>
     activePage === page ? s.linkActive : s.link;
@@ -86,9 +99,29 @@ export default function Navbar({ activePage = "home" }: NavbarProps) {
           {itemCount > 0 && <span style={s.badge}>{itemCount}</span>}
         </div>
 
-        <svg style={s.iconSvg} onClick={() => router.push("/auth")} xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#5b2d8e" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
-        </svg>
+        {user ? (
+          <div style={{ position: "relative" }}>
+            <button
+              onClick={() => setUserMenuOpen(!userMenuOpen)}
+              style={s.avatarBtn}
+              title={user.email}
+            >
+              {userInitials}
+            </button>
+            {userMenuOpen && (
+              <div style={s.userMenu}>
+                <p style={s.userMenuEmail}>{user.email}</p>
+                <hr style={{ border: "none", borderTop: "1px solid #f0eaf8", margin: "6px 0" }} />
+                <button style={s.userMenuItem} onClick={() => { setUserMenuOpen(false); router.push("/profile"); }}>My Profile</button>
+                <button style={{ ...s.userMenuItem, color: "#c0395a" }} onClick={handleSignOut}>Sign Out</button>
+              </div>
+            )}
+          </div>
+        ) : (
+          <svg style={s.iconSvg} onClick={() => router.push("/auth")} xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#5b2d8e" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+          </svg>
+        )}
       </div>
     </nav>
   );
@@ -110,6 +143,29 @@ const s: { [key: string]: React.CSSProperties } = {
     position: "absolute", top: -8, right: -8, background: "#c0395a", color: "#fff",
     fontSize: 10, fontWeight: 700, borderRadius: "50%", width: 16, height: 16,
     display: "flex", alignItems: "center", justifyContent: "center",
+  },
+  avatarBtn: {
+    width: 34, height: 34, borderRadius: "50%",
+    background: "linear-gradient(135deg,#5b2d8e,#c0395a)",
+    color: "#fff", fontSize: 12, fontWeight: 700,
+    border: "none", cursor: "pointer", fontFamily: "Georgia,serif",
+    display: "flex", alignItems: "center", justifyContent: "center",
+  },
+  userMenu: {
+    position: "absolute", right: 0, top: 42,
+    background: "#fff", borderRadius: 12, boxShadow: "0 4px 20px rgba(91,45,142,0.12)",
+    padding: "10px 0", minWidth: 180, zIndex: 200,
+    border: "1px solid #f0eaf8",
+  },
+  userMenuEmail: {
+    fontSize: 11.5, color: "#a89ab0", padding: "0 16px 6px",
+    margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+  },
+  userMenuItem: {
+    display: "block", width: "100%", padding: "9px 16px",
+    background: "none", border: "none", textAlign: "left",
+    fontSize: 13.5, color: "#2d1a3a", fontWeight: 500, cursor: "pointer",
+    fontFamily: "'Inter',sans-serif",
   },
 };
 

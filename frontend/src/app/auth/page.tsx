@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase";
 
 export default function AuthPage() {
   const [tab, setTab] = useState("login");
@@ -8,7 +9,58 @@ export default function AuthPage() {
   const [showSignupPass, setShowSignupPass] = useState(false);
   const [remember, setRemember] = useState(false);
   const [agree, setAgree] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  const [loginEmail, setLoginEmail] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+  const [signupName, setSignupName] = useState("");
+  const [signupEmail, setSignupEmail] = useState("");
+  const [signupPassword, setSignupPassword] = useState("");
+
   const router = useRouter();
+  const supabase = createClient();
+
+  const handleLogin = async () => {
+    setError(null);
+    setLoading(true);
+    const { error } = await supabase.auth.signInWithPassword({
+      email: loginEmail,
+      password: loginPassword,
+    });
+    setLoading(false);
+    if (error) { setError(error.message); return; }
+    router.push("/home");
+  };
+
+  const handleSignup = async () => {
+    if (!agree) { setError("Please agree to the Terms of Service."); return; }
+    setError(null);
+    setLoading(true);
+    const { error } = await supabase.auth.signUp({
+      email: signupEmail,
+      password: signupPassword,
+      options: {
+        data: { full_name: signupName },
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
+      },
+    });
+    setLoading(false);
+    if (error) { setError(error.message); return; }
+    setSuccess("Check your email to confirm your account.");
+  };
+
+  const handleGoogleSignIn = async () => {
+    setError(null);
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
+    });
+    if (error) setError(error.message);
+  };
 
   return (
     <div style={styles.page}>
@@ -28,9 +80,12 @@ export default function AuthPage() {
       {/* Right Panel */}
       <div style={styles.right}>
         <div style={styles.tabsWrapper}>
-          <button onClick={() => setTab("login")} className={tab === "login" ? "tab tab-active" : "tab tab-inactive"}>Login</button>
-          <button onClick={() => setTab("signup")} className={tab === "signup" ? "tab tab-active" : "tab tab-inactive"}>Sign Up</button>
+          <button onClick={() => { setTab("login"); setError(null); setSuccess(null); }} className={tab === "login" ? "tab tab-active" : "tab tab-inactive"}>Login</button>
+          <button onClick={() => { setTab("signup"); setError(null); setSuccess(null); }} className={tab === "signup" ? "tab tab-active" : "tab tab-inactive"}>Sign Up</button>
         </div>
+
+        {error && <div style={styles.errorBox}>{error}</div>}
+        {success && <div style={styles.successBox}>{success}</div>}
 
         {tab === "login" && (
           <div style={styles.form}>
@@ -40,13 +95,16 @@ export default function AuthPage() {
             <label style={styles.label}>Email Address</label>
             <div style={styles.inputWrapper}>
               <span style={styles.inputIcon}>✉</span>
-              <input type="email" placeholder="hello@lavender.com" style={styles.input} className="lav-input" />
+              <input type="email" placeholder="hello@lavender.com" style={styles.input} className="lav-input"
+                value={loginEmail} onChange={e => setLoginEmail(e.target.value)} />
             </div>
 
             <label style={styles.label}>Password</label>
             <div style={styles.inputWrapper}>
               <span style={styles.inputIcon}>🔒</span>
-              <input type={showLoginPass ? "text" : "password"} placeholder="••••••••" style={styles.input} className="lav-input" />
+              <input type={showLoginPass ? "text" : "password"} placeholder="••••••••" style={styles.input} className="lav-input"
+                value={loginPassword} onChange={e => setLoginPassword(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && handleLogin()} />
               <span style={styles.eyeIcon} onClick={() => setShowLoginPass(!showLoginPass)}>{showLoginPass ? "🙈" : "👁"}</span>
             </div>
 
@@ -55,7 +113,9 @@ export default function AuthPage() {
               Remember me for 30 days
             </label>
 
-            <button style={styles.primaryBtn} className="lav-btn" onClick={() => router.push("/home")}>Login to Account</button>
+            <button style={{ ...styles.primaryBtn, opacity: loading ? 0.7 : 1 }} className="lav-btn" onClick={handleLogin} disabled={loading}>
+              {loading ? "Signing in…" : "Login to Account"}
+            </button>
 
             <div style={styles.dividerRow}>
               <div style={styles.dividerLine} />
@@ -63,7 +123,7 @@ export default function AuthPage() {
               <div style={styles.dividerLine} />
             </div>
 
-            <button style={styles.googleBtn} className="lav-google"><GoogleIcon />Google</button>
+            <button style={styles.googleBtn} className="lav-google" onClick={handleGoogleSignIn}><GoogleIcon />Sign in with Google</button>
           </div>
         )}
 
@@ -72,7 +132,7 @@ export default function AuthPage() {
             <h1 style={styles.heading}>Create Account</h1>
             <p style={styles.subheading}>Join our community for exclusive early access.</p>
 
-            <button style={styles.googleBtn} className="lav-google"><GoogleIcon />Google</button>
+            <button style={styles.googleBtn} className="lav-google" onClick={handleGoogleSignIn}><GoogleIcon />Sign up with Google</button>
 
             <div style={styles.dividerRow}>
               <div style={styles.dividerLine} />
@@ -83,19 +143,23 @@ export default function AuthPage() {
             <label style={styles.label}>Full Name</label>
             <div style={styles.inputWrapper}>
               <span style={styles.inputIcon}>👤</span>
-              <input type="text" placeholder="Elowen Lavender" style={styles.input} className="lav-input" />
+              <input type="text" placeholder="Elowen Lavender" style={styles.input} className="lav-input"
+                value={signupName} onChange={e => setSignupName(e.target.value)} />
             </div>
 
             <label style={styles.label}>Email Address</label>
             <div style={styles.inputWrapper}>
               <span style={styles.inputIcon}>✉</span>
-              <input type="email" placeholder="hello@lavender.com" style={styles.input} className="lav-input" />
+              <input type="email" placeholder="hello@lavender.com" style={styles.input} className="lav-input"
+                value={signupEmail} onChange={e => setSignupEmail(e.target.value)} />
             </div>
 
             <label style={styles.label}>Password</label>
             <div style={styles.inputWrapper}>
               <span style={styles.inputIcon}>🔒</span>
-              <input type={showSignupPass ? "text" : "password"} placeholder="••••••••" style={styles.input} className="lav-input" />
+              <input type={showSignupPass ? "text" : "password"} placeholder="••••••••" style={styles.input} className="lav-input"
+                value={signupPassword} onChange={e => setSignupPassword(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && handleSignup()} />
               <span style={styles.eyeIcon} onClick={() => setShowSignupPass(!showSignupPass)}>{showSignupPass ? "🙈" : "👁"}</span>
             </div>
 
@@ -104,11 +168,13 @@ export default function AuthPage() {
               I agree to the <span style={styles.link}>Terms of Service</span> and <span style={styles.link}>Privacy Policy</span>.
             </label>
 
-            <button style={styles.primaryBtn} className="lav-btn">Create Account</button>
+            <button style={{ ...styles.primaryBtn, opacity: loading ? 0.7 : 1 }} className="lav-btn" onClick={handleSignup} disabled={loading}>
+              {loading ? "Creating account…" : "Create Account"}
+            </button>
 
             <p style={styles.loginLink}>
               Already have an account?{" "}
-              <span style={styles.link} onClick={() => setTab("login")}>Log In</span>
+              <span style={styles.link} onClick={() => { setTab("login"); setError(null); setSuccess(null); }}>Log In</span>
             </p>
           </div>
         )}
@@ -166,7 +232,19 @@ const styles: { [key: string]: React.CSSProperties } = {
   },
   tabsWrapper: {
     display: "flex", width: "100%", maxWidth: 460,
-    marginBottom: 16, borderBottom: "1.5px solid #e8dce8",
+    marginBottom: 8, borderBottom: "1.5px solid #e8dce8",
+  },
+  errorBox: {
+    width: "100%", maxWidth: 460, marginBottom: 10,
+    padding: "10px 16px", borderRadius: 8,
+    background: "#fde8ec", color: "#c0395a",
+    fontSize: 13.5, fontWeight: 500,
+  },
+  successBox: {
+    width: "100%", maxWidth: 460, marginBottom: 10,
+    padding: "10px 16px", borderRadius: 8,
+    background: "#e8f5e9", color: "#2e7d32",
+    fontSize: 13.5, fontWeight: 500,
   },
   form: { width: "100%", maxWidth: 460, display: "flex", flexDirection: "column" },
   heading: {

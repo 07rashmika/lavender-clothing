@@ -1,8 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { useAuth } from "@/context/AuthContext";
 
 interface Order {
   id: string;
@@ -27,13 +29,26 @@ const statusStyle: Record<Order["status"], React.CSSProperties> = {
 export default function ProfilePage() {
   const [emailNotifs, setEmailNotifs] = useState(true);
   const [styleRecs, setStyleRecs] = useState(true);
+  const { user, loading, signOut } = useAuth();
+  const router = useRouter();
 
-  const [fullName] = useState("Sophie Chen");
-  const [email] = useState("sophie.c@fashion-studio.com");
-  const [phone] = useState("+44 (0) 7700 900077");
-  const [language] = useState("English (UK)");
+  useEffect(() => {
+    if (!loading && !user) router.push("/auth");
+  }, [user, loading, router]);
 
-  const initials = fullName.split(" ").map((n) => n[0]).join("").toUpperCase();
+  if (loading || !user) return null;
+
+  const fullName = user.user_metadata?.full_name ?? user.email?.split("@")[0] ?? "User";
+  const email = user.email ?? "";
+  const phone = user.user_metadata?.phone ?? "—";
+  const language = "English (UK)";
+
+  const initials = fullName.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2);
+
+  const handleSignOut = async () => {
+    await signOut();
+    router.push("/auth");
+  };
 
   return (
     <div style={s.page}>
@@ -44,7 +59,8 @@ export default function ProfilePage() {
         <div style={s.headerRow}>
           <div style={s.avatar}>{initials}</div>
           <h1 style={s.name}>{fullName}</h1>
-          <span style={s.memberBadge}>GOLD MEMBER</span>
+          <span style={s.memberBadge}>MEMBER</span>
+          <button style={s.signOutBtn} onClick={handleSignOut}>Sign Out</button>
         </div>
 
         {/* Top grid */}
@@ -213,6 +229,11 @@ const s: { [key: string]: React.CSSProperties } = {
   memberBadge: {
     fontSize: 10, fontWeight: 700, letterSpacing: 0.5, color: "#8a6d3d",
     background: "#f3e3d0", padding: "4px 10px", borderRadius: 20,
+  },
+  signOutBtn: {
+    marginLeft: "auto", background: "none", border: "1.5px solid #e8d0d8",
+    borderRadius: 20, padding: "6px 18px", color: "#c0395a",
+    fontSize: 13, fontWeight: 600, cursor: "pointer",
   },
 
   topGrid: { display: "grid", gridTemplateColumns: "1fr 320px", gap: 20, alignItems: "start" },
