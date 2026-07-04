@@ -18,6 +18,21 @@ const AuthContext = createContext<AuthContextValue>({
   signOut: async () => {},
 });
 
+export async function syncUserWithBackend(accessToken: string) {
+  try {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/sync`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (!res.ok) {
+      const body = await res.text();
+      console.error(`[sync] failed ${res.status}:`, body);
+    }
+  } catch (err) {
+    console.error("[sync] network error:", err);
+  }
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
@@ -37,10 +52,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
+
+      if (event === "SIGNED_IN" && session?.access_token) {
+        syncUserWithBackend(session.access_token);
+      }
     });
 
     return () => subscription.unsubscribe();
