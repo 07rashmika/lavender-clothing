@@ -112,7 +112,7 @@ export default function AuthPage() {
       </div>
 
       <div style={s.right}>
-        <div style={s.scroll}>
+        <div style={s.scroll} className="lav-scroll">
           <div style={s.tabsWrapper}>
             <button onClick={() => switchTab("login")} className={tab === "login" ? "tab tab-active" : "tab tab-inactive"}>Login</button>
             <button onClick={() => switchTab("signup")} className={tab === "signup" ? "tab tab-active" : "tab tab-inactive"}>Sign Up</button>
@@ -291,6 +291,6 @@ const css = `
   .lav-input:focus { border-color: #c0395a !important; background: #fff !important; }
   .lav-btn:hover { opacity: 0.88; }
   .lav-google:hover { background: #fdf3f6 !important; }
-  .lav-scroll::-webkit-scrollbar { width: 4px; }
-  .lav-scroll::-webkit-scrollbar-thumb { background: #e8dce8; border-radius: 4px; }
+  .lav-scroll { scrollbar-width: none; -ms-overflow-style: none; }
+  .lav-scroll::-webkit-scrollbar { display: none; width: 0; }
 `;
