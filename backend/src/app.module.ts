@@ -10,6 +10,9 @@ import { OrdersModule } from './orders/orders.module';
 import { CustomizationsModule } from './customizations/customizations.module';
 import { SettingsModule } from './settings/settings.module';
 import { DashboardModule } from './dashboard/dashboard.module';
+import { CartModule } from './cart/cart.module';
+import { WishlistModule } from './wishlist/wishlist.module';
+import { PaymentsModule } from './payments/payments.module';
 
 @Module({
   imports: [
@@ -22,6 +25,9 @@ import { DashboardModule } from './dashboard/dashboard.module';
     CustomizationsModule,
     SettingsModule,
     DashboardModule,
+    CartModule,
+    WishlistModule,
+    PaymentsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

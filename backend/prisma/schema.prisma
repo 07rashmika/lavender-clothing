@@ -49,6 +49,8 @@ model User {
 
   orders         Order[]
   customizations Customization[]
+  cartItems      CartItem[]
+  wishlistItems  WishlistItem[]
 
   @@map("users")
 }
@@ -70,31 +72,34 @@ model Product {
   createdAt           DateTime      @default(now())
   updatedAt           DateTime      @updatedAt
 
-  orderItems OrderItem[]
+  orderItems    OrderItem[]
+  cartItems     CartItem[]
+  wishlistItems WishlistItem[]
 
   @@map("products")
 }
 
 model Order {
-  id                String        @id @default(cuid())
-  orderNumber       String        @unique
-  userId            String
-  user              User          @relation(fields: [userId], references: [id])
-  items             OrderItem[]
-  subtotalCents     Int
-  taxCents          Int
-  feeCents          Int
-  totalCents        Int
-  payment           PaymentMethod
-  status            OrderStatus   @default(PROCESSING)
-  shippingFirstName String
-  shippingLastName  String
-  shippingAddress   String
-  shippingCity      String
-  shippingState     String
-  shippingZip       String
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
+  id                    String        @id @default(cuid())
+  orderNumber           String        @unique
+  userId                String
+  user                  User          @relation(fields: [userId], references: [id])
+  items                 OrderItem[]
+  subtotalCents         Int
+  taxCents              Int
+  feeCents              Int
+  totalCents            Int
+  payment               PaymentMethod
+  stripePaymentIntentId String?       @unique
+  status                OrderStatus   @default(PROCESSING)
+  shippingFirstName     String
+  shippingLastName      String
+  shippingAddress       String
+  shippingCity          String
+  shippingState         String
+  shippingZip           String
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
 
   @@map("orders")
 }
@@ -149,4 +154,33 @@ model StoreSettings {
   updatedAt              DateTime @updatedAt
 
   @@map("store_settings")
+}
+
+model CartItem {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  color       String
+  colorSwatch String?
+  size        String
+  quantity    Int      @default(1)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([userId, productId, color, size])
+  @@map("cart_items")
+}
+
+model WishlistItem {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, productId])
+  @@map("wishlist_items")
 }

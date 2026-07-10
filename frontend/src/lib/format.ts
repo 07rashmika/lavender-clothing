@@ -4,7 +4,8 @@ export function formatMoney(cents: number): string {
 
 export function productImageUrl(path: string): string {
   if (path.startsWith("http")) return path;
-  return `${process.env.NEXT_PUBLIC_API_URL}${path}`;
+  if (path.startsWith("/uploads")) return `${process.env.NEXT_PUBLIC_API_URL}${path}`;
+  return path;
 }
 
 const STATUS_LABELS: Record<string, string> = {

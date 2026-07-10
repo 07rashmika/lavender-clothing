@@ -1,6 +1,8 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState } from "react";
+import { useAuth } from "./AuthContext";
+import { api } from "@/lib/api";
 
 export interface WishlistItem {
   id: string;
@@ -13,9 +15,9 @@ export interface WishlistItem {
 
 interface WishlistContextType {
   items: WishlistItem[];
-  addToWishlist: (item: WishlistItem) => void;
-  removeFromWishlist: (id: string) => void;
-  toggleWishlist: (item: WishlistItem) => void;
+  addToWishlist: (item: WishlistItem) => Promise<void>;
+  removeFromWishlist: (id: string) => Promise<void>;
+  toggleWishlist: (item: WishlistItem) => Promise<void>;
   isInWishlist: (id: string) => boolean;
   wishlistCount: number;
 }
@@ -25,10 +27,22 @@ const WishlistContext = createContext<WishlistContextType | undefined>(undefined
 const STORAGE_KEY = "lavender_wishlist";
 
 export function WishlistProvider({ children }: { children: React.ReactNode }) {
+  const { user, loading: authLoading } = useAuth();
   const [items, setItems] = useState<WishlistItem[]>([]);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
+    if (authLoading) return;
+
+    if (user) {
+      api
+        .get("/wishlist")
+        .then((data) => setItems(data ?? []))
+        .catch((err) => console.error("Failed to load wishlist", err))
+        .finally(() => setLoaded(true));
+      return;
+    }
+
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) setItems(JSON.parse(stored));
@@ -36,31 +50,49 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
       console.error("Failed to load wishlist", e);
     }
     setLoaded(true);
-  }, []);
+  }, [user, authLoading]);
 
   useEffect(() => {
-    if (loaded) {
+    if (loaded && !user) {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
     }
-  }, [items, loaded]);
+  }, [items, loaded, user]);
 
-  const addToWishlist = (item: WishlistItem) => {
-    setItems((prev) => {
-      if (prev.some((i) => i.id === item.id)) return prev;
-      return [...prev, item];
-    });
+  const addToWishlist = async (item: WishlistItem) => {
+    if (user) {
+      try {
+        const updated = await api.post("/wishlist", { productId: item.id });
+        setItems(updated);
+      } catch (e) {
+        console.error("Failed to add to wishlist", e);
+      }
+      return;
+    }
+
+    setItems((prev) => (prev.some((i) => i.id === item.id) ? prev : [...prev, item]));
   };
 
-  const removeFromWishlist = (id: string) => {
+  const removeFromWishlist = async (id: string) => {
+    if (user) {
+      try {
+        const updated = await api.delete(`/wishlist/${id}`);
+        setItems(updated);
+      } catch (e) {
+        console.error("Failed to remove from wishlist", e);
+      }
+      return;
+    }
+
     setItems((prev) => prev.filter((i) => i.id !== id));
   };
 
-  const toggleWishlist = (item: WishlistItem) => {
-    setItems((prev) => {
-      const exists = prev.some((i) => i.id === item.id);
-      if (exists) return prev.filter((i) => i.id !== item.id);
-      return [...prev, item];
-    });
+  const toggleWishlist = async (item: WishlistItem) => {
+    const exists = items.some((i) => i.id === item.id);
+    if (exists) {
+      await removeFromWishlist(item.id);
+    } else {
+      await addToWishlist(item);
+    }
   };
 
   const isInWishlist = (id: string) => items.some((i) => i.id === id);

@@ -6,6 +6,7 @@ import {
 import { PaymentMethod, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { SettingsService } from '../settings/settings.service';
+import { PaymentsService } from '../payments/payments.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
 import { QueryOrderDto } from './dto/query-order.dto';
@@ -15,6 +16,7 @@ export class OrdersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly settingsService: SettingsService,
+    private readonly paymentsService: PaymentsService,
   ) {}
 
   private generateOrderNumber(): string {
@@ -55,6 +57,23 @@ export class OrdersService {
           : settings.shippingFeeCents;
     const totalCents = subtotalCents + taxCents + feeCents;
 
+    if (dto.payment === PaymentMethod.CARD) {
+      if (!dto.stripePaymentIntentId) {
+        throw new BadRequestException('Card payment requires a payment intent');
+      }
+      const existingOrder = await this.prisma.order.findUnique({
+        where: { stripePaymentIntentId: dto.stripePaymentIntentId },
+        include: { items: true },
+      });
+      if (existingOrder) {
+        return existingOrder;
+      }
+      await this.paymentsService.verifyPaymentIntent(
+        dto.stripePaymentIntentId,
+        totalCents,
+      );
+    }
+
     const itemsData: Prisma.OrderItemCreateManyOrderInput[] = dto.items.map(
       (item) => {
         const product = productMap.get(item.productId)!;
@@ -81,6 +100,7 @@ export class OrdersService {
               feeCents,
               totalCents,
               payment: dto.payment,
+              stripePaymentIntentId: dto.stripePaymentIntentId,
               shippingFirstName: dto.shippingFirstName,
               shippingLastName: dto.shippingLastName,
               shippingAddress: dto.shippingAddress,

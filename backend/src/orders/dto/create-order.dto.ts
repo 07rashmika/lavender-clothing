@@ -64,4 +64,8 @@ export class CreateOrderDto {
 
   @IsEnum(PaymentMethod)
   payment: PaymentMethod;
+
+  @IsOptional()
+  @IsString()
+  stripePaymentIntentId?: string;
 }

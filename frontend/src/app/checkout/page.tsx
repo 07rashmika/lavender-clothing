@@ -3,12 +3,14 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import { Elements, CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useCart } from "@/context/CartContext";
 import { useAuth } from "@/context/AuthContext";
 import { api } from "@/lib/api";
 import { formatMoney } from "@/lib/format";
+import { getStripe } from "@/lib/stripe";
 import type { Order } from "@/types/order";
 
 type Step = 1 | 2 | 3;
@@ -38,9 +40,19 @@ const DEFAULT_SETTINGS: PublicSettings = {
 };
 
 export default function CheckoutPage() {
+  return (
+    <Elements stripe={getStripe()}>
+      <CheckoutForm />
+    </Elements>
+  );
+}
+
+function CheckoutForm() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const { items, subtotal, clearCart } = useCart();
+  const stripe = useStripe();
+  const elements = useElements();
 
   const [settings, setSettings] = useState<PublicSettings>(DEFAULT_SETTINGS);
   const [step, setStep] = useState<Step>(1);
@@ -53,7 +65,9 @@ export default function CheckoutPage() {
     zip: "",
   });
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(null);
-  const [card, setCard] = useState({ number: "", expiry: "", cvv: "" });
+  const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [cardComplete, setCardComplete] = useState(false);
+  const [intentError, setIntentError] = useState<string | null>(null);
   const [placing, setPlacing] = useState(false);
   const [placeError, setPlaceError] = useState<string | null>(null);
   const [placed, setPlaced] = useState(false);
@@ -73,7 +87,6 @@ export default function CheckoutPage() {
   }, []);
 
   const shippingComplete = Object.values(shipping).every((v) => v.trim() !== "");
-  const cardComplete = card.number.trim() !== "" && card.expiry.trim() !== "" && card.cvv.trim() !== "";
 
   const subtotalCents = Math.round(subtotal * 100);
   const feePreviewCents =
@@ -93,15 +106,26 @@ export default function CheckoutPage() {
     if (shippingComplete) setStep(2);
   };
 
-  const selectPaymentMethod = (method: PaymentMethod) => {
+  const selectPaymentMethod = async (method: PaymentMethod) => {
     setPaymentMethod(method);
+    setIntentError(null);
     if (method === "cod") {
       setStep(3);
+      return;
+    }
+    if (method === "card" && !clientSecret) {
+      try {
+        const intent = await api.post("/payments/create-intent");
+        setClientSecret(intent.clientSecret);
+      } catch (err) {
+        console.error("[checkout] create-intent failed:", err);
+        setIntentError("Couldn't start card payment. Please try again.");
+      }
     }
   };
 
   const goToReviewFromCard = () => {
-    if (cardComplete) setStep(3);
+    if (cardComplete && clientSecret) setStep(3);
   };
 
   const placeOrder = async () => {
@@ -109,6 +133,36 @@ export default function CheckoutPage() {
     setPlaceError(null);
     setPlacing(true);
     try {
+      let stripePaymentIntentId: string | undefined;
+
+      if (paymentMethod === "card") {
+        if (!stripe || !elements || !clientSecret) {
+          setPlaceError("Payment is not ready yet. Please try again.");
+          setPlacing(false);
+          return;
+        }
+        const cardElement = elements.getElement(CardElement);
+        if (!cardElement) {
+          setPlaceError("Please enter your card details.");
+          setPlacing(false);
+          return;
+        }
+        const result = await stripe.confirmCardPayment(clientSecret, {
+          payment_method: { card: cardElement },
+        });
+        if (result.error) {
+          setPlaceError(result.error.message ?? "Payment failed. Please check your card details.");
+          setPlacing(false);
+          return;
+        }
+        if (result.paymentIntent?.status !== "succeeded") {
+          setPlaceError("Payment was not completed. Please try again.");
+          setPlacing(false);
+          return;
+        }
+        stripePaymentIntentId = result.paymentIntent.id;
+      }
+
       const order: Order = await api.post("/orders", {
         items: items.map((i) => ({
           productId: i.id,
@@ -123,10 +177,11 @@ export default function CheckoutPage() {
         shippingState: shipping.state,
         shippingZip: shipping.zip,
         payment: paymentMethod === "card" ? "CARD" : "COD",
+        stripePaymentIntentId,
       });
       setOrderSnapshot(order);
       setPlaced(true);
-      clearCart();
+      await clearCart();
     } catch (err) {
       console.error("[checkout] place order failed:", err);
       setPlaceError("We couldn't place your order. Please check your bag and try again.");
@@ -305,23 +360,33 @@ export default function CheckoutPage() {
                     onClick={() => selectPaymentMethod("cod")}
                   />
                 </div>
+              </section>
+            )}
 
-                {paymentMethod === "card" && (
-                  <div style={{ marginTop: 20 }}>
-                    <Field label="Card Number" value={card.number} onChange={(v) => setCard((p) => ({ ...p, number: v }))} placeholder="0000 0000 0000 0000" />
-                    <div style={s.row2}>
-                      <Field label="Expiry Date" value={card.expiry} onChange={(v) => setCard((p) => ({ ...p, expiry: v }))} placeholder="MM/YY" />
-                      <Field label="CVV" value={card.cvv} onChange={(v) => setCard((p) => ({ ...p, cvv: v }))} placeholder="•••" />
-                    </div>
-                    <button
-                      style={{ ...s.placeOrderBtn, opacity: cardComplete ? 1 : 0.5, marginTop: 12 }}
-                      onClick={goToReviewFromCard}
-                      disabled={!cardComplete}
-                    >
-                      Continue to Review
-                    </button>
-                  </div>
-                )}
+            {/* Kept mounted across steps 2-3 so Stripe retains a reference to this element; only visible on step 2. */}
+            {paymentMethod === "card" && (
+              <section style={{ ...s.card, marginTop: 20, display: step === 2 ? "block" : "none" }}>
+                {intentError && <p style={{ color: "#c0395a", fontSize: 13, marginBottom: 12 }}>{intentError}</p>}
+                <label style={s.fieldLabel}>Card Details</label>
+                <div style={s.cardElementWrap}>
+                  <CardElement
+                    options={{
+                      hidePostalCode: true,
+                      style: {
+                        base: { fontSize: "14px", color: "#3d2e4a", "::placeholder": { color: "#a89ab0" } },
+                      },
+                    }}
+                    onChange={(e) => setCardComplete(e.complete)}
+                  />
+                </div>
+                <p style={s.testCardNote}>Test mode — use card number 4242 4242 4242 4242, any future expiry, any CVC.</p>
+                <button
+                  style={{ ...s.placeOrderBtn, opacity: cardComplete && clientSecret ? 1 : 0.5, marginTop: 12 }}
+                  onClick={goToReviewFromCard}
+                  disabled={!cardComplete || !clientSecret}
+                >
+                  Continue to Review
+                </button>
               </section>
             )}
 
@@ -340,7 +405,7 @@ export default function CheckoutPage() {
                 <div style={s.reviewBlock}>
                   <p style={s.reviewLabel}>Payment Method</p>
                   <p style={s.reviewText}>
-                    {paymentMethod === "card" ? "Card ending in " + card.number.slice(-4) : "Cash on Delivery"}
+                    {paymentMethod === "card" ? "Card" : "Cash on Delivery"}
                   </p>
                 </div>
 
@@ -486,6 +551,8 @@ const s: { [key: string]: React.CSSProperties } = {
 
   fieldLabel: { display: "block", fontSize: 12, color: "#8a7a94", marginBottom: 6 },
   input: { width: "100%", padding: "10px 12px", borderRadius: 8, border: "1.5px solid #e8dce8", fontSize: 14, color: "#3d2e4a", outline: "none", boxSizing: "border-box" },
+  cardElementWrap: { padding: "12px 12px", borderRadius: 8, border: "1.5px solid #e8dce8", background: "#fff" },
+  testCardNote: { fontSize: 11.5, color: "#a89ab0", marginTop: 8 },
 
   reviewBlock: { marginBottom: 16 },
   reviewLabel: { fontSize: 11, color: "#a89ab0", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 },

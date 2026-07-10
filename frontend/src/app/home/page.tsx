@@ -4,6 +4,11 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { useCart } from "@/context/CartContext";
+import { useWishlist } from "@/context/WishlistContext";
+import { api } from "@/lib/api";
+import { productImageUrl } from "@/lib/format";
+import type { Product } from "@/types/product";
 
 const heroSlides = [
   {
@@ -38,11 +43,20 @@ const heroSlides = [
   },
 ];
 
+const COLLECTIONS = [
+  { label: "Sweaters", category: "Sweaters" },
+  { label: "Crop Tops", category: "Crop Tops" },
+  { label: "Dresses", category: "Frocks" },
+  { label: "Blouses", category: "Blouses" },
+  { label: "Denims", category: "Denims" },
+];
+
 export default function HomePage() {
   const router = useRouter();
-  const [cartCount, setCartCount] = useState(0);
-  const [wishlist, setWishlist] = useState<number[]>([]);
+  const { addToCart } = useCart();
+  const { toggleWishlist, isInWishlist } = useWishlist();
   const [slide, setSlide] = useState(0);
+  const [products, setProducts] = useState<Product[]>([]);
 
   const nextSlide = useCallback(() => {
     setSlide((prev) => (prev + 1) % heroSlides.length);
@@ -57,18 +71,18 @@ export default function HomePage() {
     return () => clearInterval(timer);
   }, [nextSlide]);
 
-  const toggleWishlist = (id: number) => {
-    setWishlist(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
-  };
+  useEffect(() => {
+    api
+      .get("/products?status=ACTIVE")
+      .then((data) => setProducts(data ?? []))
+      .catch((err) => console.error("[home] products fetch failed:", err));
+  }, []);
 
-  const products = [
-    { id: 1, name: "Boho Fringe Kimono", price: "$89.00", img: "/lav-p5.jpg", tag: "New" },
-    { id: 2, name: "Yellow Chic Blouse", price: "$64.00", img: "/lav-p1.jpg", tag: "Hot" },
-    { id: 3, name: "Floral Midi Dress", price: "$112.00", img: "/lav-p2.jpg", tag: "" },
-    { id: 4, name: "Classic Navy Jumpsuit", price: "$95.00", img: "/lav-p6.jpg", tag: "New" },
-    { id: 5, name: "Summer Duo Set", price: "$138.00", img: "/lav-p3.jpg", tag: "" },
-    { id: 6, name: "Boho Straw Hat Look", price: "$76.00", img: "/lav-p4.jpg", tag: "Sale" },
-  ];
+  const newArrivals = products.slice(0, 6);
+  const collectionTiles = COLLECTIONS.map((c) => ({
+    ...c,
+    product: products.find((p) => p.category === c.category),
+  }));
 
   const current = heroSlides[slide];
 
@@ -133,26 +147,18 @@ export default function HomePage() {
       <section style={s.section}>
         <h2 style={s.sectionTitle}>Curated Collections</h2>
         <div style={s.collectionsGrid}>
-          <div style={{...s.collCard, ...s.collLarge}} onClick={() => router.push("/shop")}>
-            <Image src="/lav-p3.jpg" alt="Sweaters" fill sizes="33vw" style={s.collImg} />
-            <div style={s.collOverlay}><span style={s.collLabel}>Sweaters</span></div>
-          </div>
-          <div style={s.collCard} onClick={() => router.push("/shop")}>
-            <Image src="/lav-p1.jpg" alt="Crop Tops" fill sizes="33vw" style={s.collImg} />
-            <div style={s.collOverlay}><span style={s.collLabel}>Crop Tops</span></div>
-          </div>
-          <div style={s.collCard} onClick={() => router.push("/shop")}>
-            <Image src="/lav-p6.jpg" alt="Dresses" fill sizes="33vw" style={s.collImg} />
-            <div style={s.collOverlay}><span style={s.collLabel}>Dresses</span></div>
-          </div>
-          <div style={s.collCard} onClick={() => router.push("/shop")}>
-            <Image src="/lav-p5.jpg" alt="Fringe" fill sizes="33vw" style={s.collImg} />
-            <div style={s.collOverlay}><span style={s.collLabel}>Blouses</span></div>
-          </div>
-          <div style={s.collCard} onClick={() => router.push("/shop")}>
-            <Image src="/lav-denim.jpg" alt="Denims" fill sizes="33vw" style={s.collImg} />
-            <div style={s.collOverlay}><span style={s.collLabel}>Denims</span></div>
-          </div>
+          {collectionTiles.map((tile, i) => (
+            <div
+              key={tile.label}
+              style={{ ...s.collCard, ...(i === 0 ? s.collLarge : {}) }}
+              onClick={() => router.push("/shop")}
+            >
+              {tile.product?.images[0] && (
+                <Image src={productImageUrl(tile.product.images[0])} alt={tile.label} fill sizes="33vw" style={s.collImg} />
+              )}
+              <div style={s.collOverlay}><span style={s.collLabel}>{tile.label}</span></div>
+            </div>
+          ))}
         </div>
       </section>
 
@@ -173,21 +179,55 @@ export default function HomePage() {
           <a style={s.viewAll} onClick={() => router.push("/shop")} href="#">View All Products →</a>
         </div>
         <div style={s.productsGrid}>
-          {products.map(p => (
+          {newArrivals.map(p => (
             <div key={p.id} style={s.productCard} className="lav-card" onClick={() => router.push(`/shop/${p.id}`)}>
               <div style={s.productImgWrap}>
-                <Image src={p.img} alt={p.name} fill sizes="33vw" style={s.productImg} />
+                {p.images[0] && (
+                  <Image src={productImageUrl(p.images[0])} alt={p.name} fill sizes="33vw" style={s.productImg} />
+                )}
                 {p.tag && <span style={{...s.productTag, ...(p.tag==="Sale"?s.tagSale:p.tag==="Hot"?s.tagHot:s.tagNew)}}>{p.tag}</span>}
                 <div style={s.productActions} className="product-actions">
-                  <button style={s.actionBtn} onClick={(e) => { e.stopPropagation(); toggleWishlist(p.id); }} className="lav-action">
-                    {wishlist.includes(p.id) ? "♥" : "♡"}
+                  <button
+                    style={s.actionBtn}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleWishlist({
+                        id: p.id,
+                        name: p.name,
+                        price: p.priceCents / 100,
+                        image: p.images[0] ? productImageUrl(p.images[0]) : "",
+                        badge: p.tag || undefined,
+                        colorSwatch: p.colors[0],
+                      });
+                    }}
+                    className="lav-action"
+                  >
+                    {isInWishlist(p.id) ? "♥" : "♡"}
                   </button>
-                  <button style={s.actionBtn} onClick={(e) => { e.stopPropagation(); setCartCount(c => c+1); }} className="lav-action">🛒</button>
+                  <button
+                    style={s.actionBtn}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      addToCart({
+                        id: p.id,
+                        name: p.name,
+                        price: p.priceCents / 100,
+                        image: p.images[0] ? productImageUrl(p.images[0]) : "",
+                        color: "Default",
+                        colorSwatch: p.colors[0],
+                        size: p.sizes[0] ?? "M",
+                        badge: p.tag || undefined,
+                      });
+                    }}
+                    className="lav-action"
+                  >
+                    🛒
+                  </button>
                 </div>
               </div>
               <div style={s.productInfo}>
                 <p style={s.productName}>{p.name}</p>
-                <p style={s.productPrice}>{p.price}</p>
+                <p style={s.productPrice}>${(p.priceCents / 100).toFixed(2)}</p>
               </div>
             </div>
           ))}
@@ -238,7 +278,7 @@ const s: { [key: string]: React.CSSProperties } = {
   viewAll: { fontSize: 13, color: "#c0395a", textDecoration: "none", fontWeight: 500, cursor: "pointer" },
 
   collectionsGrid: { display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gridTemplateRows: "200px 200px", gap: 12 },
-  collCard: { position: "relative", overflow: "hidden", borderRadius: 12, cursor: "pointer" },
+  collCard: { position: "relative", overflow: "hidden", borderRadius: 12, cursor: "pointer", background: "#f3e9ee" },
   collLarge: { gridRow: "1 / 3" },
   collImg: { width: "100%", height: "100%", objectFit: "cover", objectPosition: "top", transition: "transform 0.3s" },
   collOverlay: { position: "absolute", bottom: 0, left: 0, right: 0, padding: "24px 20px", background: "linear-gradient(to top, rgba(30,10,50,0.8), transparent)", display: "flex", flexDirection: "column" },
