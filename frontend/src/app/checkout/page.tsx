@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useCart } from "@/context/CartContext";
@@ -313,7 +314,7 @@ export default function CheckoutPage() {
             <h2 style={s.sectionTitle}>Order Summary</h2>
             {items.map((item) => (
               <div key={`${item.id}-${item.color}-${item.size}`} style={s.summaryItem}>
-                <img src={item.image} alt={item.name} style={s.summaryImg} />
+                <Image src={item.image} alt={item.name} width={44} height={50} style={s.summaryImg} />
                 <div style={{ flex: 1 }}>
                   <p style={s.summaryItemName}>{item.name}</p>
                   <p style={s.summaryItemMeta}>{item.color} / {item.size} × {item.quantity}</p>

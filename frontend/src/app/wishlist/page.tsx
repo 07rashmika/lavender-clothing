@@ -2,6 +2,7 @@
 
 import React from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useWishlist } from "@/context/WishlistContext";
@@ -49,7 +50,7 @@ export default function WishlistPage() {
             {items.map((item) => (
               <div key={item.id} style={s.card}>
                 <div style={s.imgWrap}>
-                  <img src={item.image} alt={item.name} style={s.img} />
+                  <Image src={item.image} alt={item.name} fill sizes="(max-width: 768px) 50vw, 25vw" style={s.img} />
                   <button style={s.removeBtn} onClick={() => removeFromWishlist(item.id)}>
                     ×
                   </button>

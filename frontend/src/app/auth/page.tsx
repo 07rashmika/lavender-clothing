@@ -1,6 +1,7 @@
 "use client";
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { createClient } from "@/lib/supabase";
 import { syncUserWithBackend } from "@/context/AuthContext";
 
@@ -103,9 +104,12 @@ export default function AuthPage() {
 
       <div style={s.left}>
         <div style={s.brandName}>Lavender</div>
-        <img
+        <Image
           src={tab === "login" ? "/lavender-signup-bg.png" : "/lavender-login-bg.png"}
           alt="Lavender fashion"
+          fill
+          priority
+          sizes="45vw"
           style={s.heroImg}
         />
         <div style={s.imgOverlay} />
@@ -250,13 +254,13 @@ function GoogleIcon() {
 }
 
 const s: { [key: string]: React.CSSProperties } = {
-  page: { display: "flex", height: "100vh", overflow: "hidden", fontFamily: "'Inter','Segoe UI',sans-serif", backgroundColor: "#fdf8f8" },
-  left: { position: "relative", width: "45%", height: "100vh", overflow: "hidden", flexShrink: 0 },
+  page: { display: "flex", minHeight: "100vh", fontFamily: "'Inter','Segoe UI',sans-serif", backgroundColor: "#fdf8f8" },
+  left: { position: "relative", width: "45%", overflow: "hidden", flexShrink: 0 },
   brandName: { position: "absolute", top: 28, left: 32, zIndex: 10, color: "#fff", fontSize: 24, fontWeight: 700, fontFamily: "'Georgia',serif", letterSpacing: 1 },
   heroImg: { width: "100%", height: "100%", objectFit: "cover", objectPosition: "top", display: "block" },
   imgOverlay: { position: "absolute", inset: 0, background: "linear-gradient(to bottom,rgba(80,40,100,0.18) 0%,rgba(60,20,80,0.32) 100%)" },
-  right: { flex: 1, height: "100vh", display: "flex", flexDirection: "column", alignItems: "center", backgroundColor: "#fdf8f8", overflow: "hidden" },
-  scroll: { width: "100%", maxWidth: 580, height: "100%", overflowY: "auto", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "40px 60px" },
+  right: { flex: 1, minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", backgroundColor: "#fdf8f8" },
+  scroll: { width: "100%", maxWidth: 580, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "40px 60px" },
   tabsWrapper: { display: "flex", width: "100%", maxWidth: 460, marginBottom: 8, borderBottom: "1.5px solid #e8dce8" },
   errorBox: { width: "100%", maxWidth: 460, marginBottom: 10, padding: "10px 16px", borderRadius: 8, background: "#fde8ec", color: "#c0395a", fontSize: 13.5, fontWeight: 500 },
   form: { width: "100%", maxWidth: 460, display: "flex", flexDirection: "column" },

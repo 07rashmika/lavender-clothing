@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 
@@ -82,10 +83,13 @@ export default function HomePage() {
         <div style={s.heroOverlay} />
 
         {heroSlides.map((item, i) => (
-          <img
+          <Image
             key={item.img}
             src={item.img}
             alt={item.title}
+            fill
+            priority={i === 0}
+            sizes="100vw"
             style={{
               ...s.heroImg,
               opacity: i === slide ? 1 : 0,
@@ -130,23 +134,23 @@ export default function HomePage() {
         <h2 style={s.sectionTitle}>Curated Collections</h2>
         <div style={s.collectionsGrid}>
           <div style={{...s.collCard, ...s.collLarge}} onClick={() => router.push("/shop")}>
-            <img src="/lav-p3.jpg" alt="Sweaters" style={s.collImg} />
+            <Image src="/lav-p3.jpg" alt="Sweaters" fill sizes="33vw" style={s.collImg} />
             <div style={s.collOverlay}><span style={s.collLabel}>Sweaters</span></div>
           </div>
           <div style={s.collCard} onClick={() => router.push("/shop")}>
-            <img src="/lav-p1.jpg" alt="Crop Tops" style={s.collImg} />
+            <Image src="/lav-p1.jpg" alt="Crop Tops" fill sizes="33vw" style={s.collImg} />
             <div style={s.collOverlay}><span style={s.collLabel}>Crop Tops</span></div>
           </div>
           <div style={s.collCard} onClick={() => router.push("/shop")}>
-            <img src="/lav-p6.jpg" alt="Dresses" style={s.collImg} />
+            <Image src="/lav-p6.jpg" alt="Dresses" fill sizes="33vw" style={s.collImg} />
             <div style={s.collOverlay}><span style={s.collLabel}>Dresses</span></div>
           </div>
           <div style={s.collCard} onClick={() => router.push("/shop")}>
-            <img src="/lav-p5.jpg" alt="Fringe" style={s.collImg} />
+            <Image src="/lav-p5.jpg" alt="Fringe" fill sizes="33vw" style={s.collImg} />
             <div style={s.collOverlay}><span style={s.collLabel}>Blouses</span></div>
           </div>
           <div style={s.collCard} onClick={() => router.push("/shop")}>
-            <img src="/lav-denim.jpg" alt="Denims" style={s.collImg} />
+            <Image src="/lav-denim.jpg" alt="Denims" fill sizes="33vw" style={s.collImg} />
             <div style={s.collOverlay}><span style={s.collLabel}>Denims</span></div>
           </div>
         </div>
@@ -172,7 +176,7 @@ export default function HomePage() {
           {products.map(p => (
             <div key={p.id} style={s.productCard} className="lav-card" onClick={() => router.push(`/shop/${p.id}`)}>
               <div style={s.productImgWrap}>
-                <img src={p.img} alt={p.name} style={s.productImg} />
+                <Image src={p.img} alt={p.name} fill sizes="33vw" style={s.productImg} />
                 {p.tag && <span style={{...s.productTag, ...(p.tag==="Sale"?s.tagSale:p.tag==="Hot"?s.tagHot:s.tagNew)}}>{p.tag}</span>}
                 <div style={s.productActions} className="product-actions">
                   <button style={s.actionBtn} onClick={(e) => { e.stopPropagation(); toggleWishlist(p.id); }} className="lav-action">

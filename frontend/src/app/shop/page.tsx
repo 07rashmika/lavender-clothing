@@ -1,6 +1,7 @@
 "use client";
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Image from "next/image";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useCart } from "@/context/CartContext";
@@ -194,7 +195,7 @@ function ShopPageContent() {
                 onClick={() => router.push(`/shop/${p.id}`)}
               >
                 <div style={s.cardImgWrap}>
-                  <img src={p.img} alt={p.name} style={s.cardImg} />
+                  <Image src={p.img} alt={p.name} fill sizes="(max-width: 768px) 50vw, 25vw" style={s.cardImg} />
                   {p.tag && (
                     <span style={{
                       ...s.tag,

@@ -2,6 +2,7 @@
 
 import React from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { useCart } from "@/context/CartContext";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -43,11 +44,11 @@ export default function BagPage() {
                 <Card key={`${item.id}-${item.color}-${item.size}`} padding={20} style={{ display: "flex", gap: 20 }}>
                   <div
                     style={{
-                      width: 90, height: 100, borderRadius: 10, overflow: "hidden",
+                      position: "relative", width: 90, height: 100, borderRadius: 10, overflow: "hidden",
                       flexShrink: 0, background: "#f3e9ee",
                     }}
                   >
-                    <img src={item.image} alt={item.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    <Image src={item.image} alt={item.name} fill sizes="90px" style={{ objectFit: "cover" }} />
                   </div>
 
                   <div style={{ flex: 1 }}>

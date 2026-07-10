@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import Image from "next/image";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 
@@ -56,7 +57,7 @@ export default function ProductDetailPage() {
         {/* LEFT — Images */}
         <div style={s.imageSection}>
           <div style={s.mainImgWrap}>
-            <img src={product.imgs[selectedImg]} alt={product.name} style={s.mainImg} />
+            <Image src={product.imgs[selectedImg]} alt={product.name} fill sizes="(max-width: 768px) 100vw, 50vw" style={s.mainImg} />
             {product.badge && (
               <span style={{
                 ...s.badge,
@@ -79,7 +80,7 @@ export default function ProductDetailPage() {
                 onClick={() => setSelectedImg(i)}
                 className="thumb"
               >
-                <img src={img} alt="" style={s.thumbImg} />
+                <Image src={img} alt="" fill sizes="68px" style={s.thumbImg} />
               </div>
             ))}
           </div>
@@ -214,7 +215,7 @@ const s: { [key: string]: React.CSSProperties } = {
   badge: { position: "absolute", top: 12, left: 12, fontSize: 10, fontWeight: 700, color: "#fff", padding: "3px 10px", borderRadius: 20 },
   wishBtnImg: { position: "absolute", top: 12, right: 12, width: 34, height: 34, borderRadius: "50%", border: "none", backgroundColor: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 8px rgba(0,0,0,0.1)" },
   thumbs: { display: "flex", gap: 8 },
-  thumb: { width: 68, height: 68, borderRadius: 10, overflow: "hidden", cursor: "pointer", flexShrink: 0 },
+  thumb: { position: "relative", width: 68, height: 68, borderRadius: 10, overflow: "hidden", cursor: "pointer", flexShrink: 0 },
   thumbImg: { width: "100%", height: "100%", objectFit: "cover", objectPosition: "top" },
 
   // RIGHT
