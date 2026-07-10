@@ -3,10 +3,15 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import type { User, Session } from "@supabase/supabase-js";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase";
+import { api } from "@/lib/api";
+
+type Role = "CUSTOMER" | "ADMIN";
 
 interface AuthContextValue {
   user: User | null;
   session: Session | null;
+  role: Role | null;
+  isAdmin: boolean;
   loading: boolean;
   signOut: () => Promise<void>;
 }
@@ -14,9 +19,18 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue>({
   user: null,
   session: null,
+  role: null,
+  isAdmin: false,
   loading: true,
   signOut: async () => {},
 });
+
+function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((resolve) => setTimeout(() => resolve(fallback), ms)),
+  ]);
+}
 
 export async function syncUserWithBackend(accessToken: string) {
   try {
@@ -33,9 +47,20 @@ export async function syncUserWithBackend(accessToken: string) {
   }
 }
 
+export async function fetchRole(): Promise<Role | null> {
+  try {
+    const me = await api.get("/users/me");
+    return (me?.role as Role) ?? null;
+  } catch (err) {
+    console.error("[role] fetch failed:", err);
+    return null;
+  }
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
+  const [role, setRole] = useState<Role | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -46,20 +71,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const supabase = createClient();
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
+      if (session?.access_token) {
+        await withTimeout(syncUserWithBackend(session.access_token), 8000, undefined);
+        setRole(await withTimeout(fetchRole(), 8000, null));
+      }
       setLoading(false);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
-      setLoading(false);
 
       if (event === "SIGNED_IN" && session?.access_token) {
-        syncUserWithBackend(session.access_token);
+        await withTimeout(syncUserWithBackend(session.access_token), 8000, undefined);
+        setRole(await withTimeout(fetchRole(), 8000, null));
       }
+
+      if (event === "SIGNED_OUT") {
+        setRole(null);
+      }
+
+      setLoading(false);
     });
 
     return () => subscription.unsubscribe();
@@ -68,11 +103,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = async () => {
     if (!isSupabaseConfigured()) return;
     const supabase = createClient();
-    await supabase.auth.signOut();
+    await withTimeout(supabase.auth.signOut(), 5000, undefined);
+    setUser(null);
+    setSession(null);
+    setRole(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, signOut }}>
+    <AuthContext.Provider value={{ user, session, role, isAdmin: role === "ADMIN", loading, signOut }}>
       {children}
     </AuthContext.Provider>
   );

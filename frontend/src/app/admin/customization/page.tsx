@@ -1,44 +1,53 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import { api } from "@/lib/api";
+import type { Customization, CustomizationStatus } from "@/types/customization";
 
-interface CustomRequest {
-  id: string;
-  customer: string;
-  date: string;
-  fabric: string;
-  color: string;
-  cut: string;
-  notes: string;
-  status: "Pending Review" | "In Production" | "Ready for Delivery" | "Delivered";
-  urgent: boolean;
-}
-
-const initialRequests: CustomRequest[] = [
-  { id: "#CX-3021", customer: "Sophie Chen", date: "Oct 12, 2024", fabric: "Silk Chiffon", color: "Lavender Mist", cut: "Wrap Dress", notes: "Wants a lower back detail.", status: "Pending Review", urgent: true },
-  { id: "#CX-3020", customer: "Amara Silva", date: "Oct 11, 2024", fabric: "Linen", color: "Rose Beige", cut: "Wide-Leg Trouser", notes: "", status: "In Production", urgent: false },
-  { id: "#CX-3019", customer: "Priya Fernando", date: "Oct 10, 2024", fabric: "Cotton Voile", color: "Cream", cut: "Off-Shoulder Blouse", notes: "Extra length requested.", status: "Ready for Delivery", urgent: false },
-  { id: "#CX-3018", customer: "Chloe Bandara", date: "Oct 9, 2024", fabric: "Velvet", color: "Deep Plum", cut: "Fitted Jumpsuit", notes: "", status: "Delivered", urgent: false },
-  { id: "#CX-3017", customer: "Nisha Perera", date: "Oct 8, 2024", fabric: "Silk Satin", color: "Champagne Gold", cut: "Slip Dress", notes: "Rush order — event next week.", status: "Pending Review", urgent: true },
+const statusOptions: CustomizationStatus[] = [
+  "PENDING_REVIEW",
+  "IN_PRODUCTION",
+  "READY_FOR_DELIVERY",
+  "DELIVERED",
 ];
 
-const statusOptions: CustomRequest["status"][] = ["Pending Review", "In Production", "Ready for Delivery", "Delivered"];
+const statusLabel: Record<CustomizationStatus, string> = {
+  PENDING_REVIEW: "Pending Review",
+  IN_PRODUCTION: "In Production",
+  READY_FOR_DELIVERY: "Ready for Delivery",
+  DELIVERED: "Delivered",
+};
 
-const statusStyle: Record<CustomRequest["status"], React.CSSProperties> = {
-  "Pending Review": { background: "#ede4f7", color: "#7c5cbf" },
-  "In Production": { background: "#fdf0d8", color: "#a3760f" },
-  "Ready for Delivery": { background: "#e3ecf9", color: "#3a5d9d" },
-  Delivered: { background: "#e3f3e8", color: "#3a9d5f" },
+const statusStyle: Record<CustomizationStatus, React.CSSProperties> = {
+  PENDING_REVIEW: { background: "#ede4f7", color: "#7c5cbf" },
+  IN_PRODUCTION: { background: "#fdf0d8", color: "#a3760f" },
+  READY_FOR_DELIVERY: { background: "#e3ecf9", color: "#3a5d9d" },
+  DELIVERED: { background: "#e3f3e8", color: "#3a9d5f" },
 };
 
 export default function CustomizationMonitorPage() {
-  const [requests, setRequests] = useState(initialRequests);
+  const [requests, setRequests] = useState<Customization[]>([]);
 
-  const updateStatus = (id: string, status: CustomRequest["status"]) => {
-    setRequests((prev) => prev.map((r) => (r.id === id ? { ...r, status } : r)));
+  useEffect(() => {
+    api
+      .get("/customizations")
+      .then((data) => setRequests(data ?? []))
+      .catch((err) => console.error("[admin/customization] fetch failed:", err));
+  }, []);
+
+  const updateStatus = async (id: string, status: CustomizationStatus) => {
+    const prev = requests;
+    setRequests((cur) => cur.map((r) => (r.id === id ? { ...r, status } : r)));
+    try {
+      await api.patch(`/customizations/${id}/status`, { status });
+    } catch (err) {
+      console.error("[admin/customization] status update failed:", err);
+      setRequests(prev);
+      alert("Failed to update request status.");
+    }
   };
 
-  const pendingCount = requests.filter((r) => r.status === "Pending Review").length;
+  const pendingCount = requests.filter((r) => r.status === "PENDING_REVIEW").length;
   const urgentCount = requests.filter((r) => r.urgent).length;
 
   return (
@@ -67,18 +76,20 @@ export default function CustomizationMonitorPage() {
             <div style={s.cardTop}>
               <div>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <p style={s.reqId}>{r.id}</p>
+                  <p style={s.reqId}>#{r.requestNumber}</p>
                   {r.urgent && <span style={s.urgentTag}>URGENT</span>}
                 </div>
-                <p style={s.customer}>{r.customer} · {r.date}</p>
+                <p style={s.customer}>
+                  {r.user?.fullName || r.user?.email} · {new Date(r.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                </p>
               </div>
               <select
                 value={r.status}
-                onChange={(e) => updateStatus(r.id, e.target.value as CustomRequest["status"])}
+                onChange={(e) => updateStatus(r.id, e.target.value as CustomizationStatus)}
                 style={{ ...s.statusSelect, ...statusStyle[r.status] }}
               >
                 {statusOptions.map((opt) => (
-                  <option key={opt} value={opt}>{opt}</option>
+                  <option key={opt} value={opt}>{statusLabel[opt]}</option>
                 ))}
               </select>
             </div>
@@ -106,6 +117,9 @@ export default function CustomizationMonitorPage() {
             )}
           </div>
         ))}
+        {requests.length === 0 && (
+          <p style={{ color: "#a89ab0", fontSize: 13.5 }}>No customization requests yet.</p>
+        )}
       </div>
     </div>
   );

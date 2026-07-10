@@ -1,13 +1,15 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import { api } from "@/lib/api";
 
 export default function AdminSettingsPage() {
+  const [loading, setLoading] = useState(true);
   const [store, setStore] = useState({
-    name: "Lavender Clothing",
-    email: "hello@lavenderclothing.com",
-    phone: "+94 77 759 210",
-    address: "728 Petal Lane, Fashion District, Colombo",
+    name: "",
+    email: "",
+    phone: "",
+    address: "",
   });
   const [shippingFee, setShippingFee] = useState("2.00");
   const [codFee, setCodFee] = useState("2.00");
@@ -18,13 +20,60 @@ export default function AdminSettingsPage() {
   const [notifyCustomRequest, setNotifyCustomRequest] = useState(true);
   const [notifyLowStock, setNotifyLowStock] = useState(false);
 
+  const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
-  const handleSave = () => {
-    // TODO: persist to backend settings endpoint
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+  useEffect(() => {
+    api
+      .get("/settings")
+      .then((data) => {
+        setStore({
+          name: data.storeName,
+          email: data.storeEmail,
+          phone: data.storePhone,
+          address: data.storeAddress,
+        });
+        setShippingFee((data.shippingFeeCents / 100).toFixed(2));
+        setCodFee((data.codFeeCents / 100).toFixed(2));
+        setTaxRate((data.taxRateBps / 100).toString());
+        setFreeShipThreshold((data.freeShipThresholdCents / 100).toFixed(2));
+        setNotifyNewOrder(data.notifyNewOrder);
+        setNotifyCustomRequest(data.notifyCustomRequest);
+        setNotifyLowStock(data.notifyLowStock);
+      })
+      .catch((err) => console.error("[admin/settings] fetch failed:", err))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await api.patch("/settings", {
+        storeName: store.name,
+        storeEmail: store.email,
+        storePhone: store.phone,
+        storeAddress: store.address,
+        shippingFeeCents: Math.round(parseFloat(shippingFee || "0") * 100),
+        codFeeCents: Math.round(parseFloat(codFee || "0") * 100),
+        taxRateBps: Math.round(parseFloat(taxRate || "0") * 100),
+        freeShipThresholdCents: Math.round(parseFloat(freeShipThreshold || "0") * 100),
+        notifyNewOrder,
+        notifyCustomRequest,
+        notifyLowStock,
+      });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch (err) {
+      console.error("[admin/settings] save failed:", err);
+      alert("Failed to save settings.");
+    } finally {
+      setSaving(false);
+    }
   };
+
+  if (loading) {
+    return <p style={{ color: "#8a7a94", fontSize: 13.5 }}>Loading settings…</p>;
+  }
 
   return (
     <div>
@@ -46,12 +95,12 @@ export default function AdminSettingsPage() {
           <div style={s.card}>
             <h2 style={s.cardTitle}>Pricing & Checkout</h2>
             <div style={s.row2}>
-              <Field label="Shipping Fee (£)" value={shippingFee} onChange={setShippingFee} wrapperStyle={{ flex: 1 }} />
-              <Field label="COD Service Charge (£)" value={codFee} onChange={setCodFee} wrapperStyle={{ flex: 1 }} />
+              <Field label="Shipping Fee ($)" value={shippingFee} onChange={setShippingFee} wrapperStyle={{ flex: 1 }} />
+              <Field label="COD Service Charge ($)" value={codFee} onChange={setCodFee} wrapperStyle={{ flex: 1 }} />
             </div>
             <div style={s.row2}>
               <Field label="Tax Rate (%)" value={taxRate} onChange={setTaxRate} wrapperStyle={{ flex: 1 }} />
-              <Field label="Free Shipping Threshold (£)" value={freeShipThreshold} onChange={setFreeShipThreshold} wrapperStyle={{ flex: 1 }} />
+              <Field label="Free Shipping Threshold ($)" value={freeShipThreshold} onChange={setFreeShipThreshold} wrapperStyle={{ flex: 1 }} />
             </div>
           </div>
         </div>
@@ -67,10 +116,10 @@ export default function AdminSettingsPage() {
 
           {/* Save */}
           <div style={s.card}>
-            <button style={s.saveBtn} onClick={handleSave}>
-              {saved ? "Settings Saved ✓" : "Save Changes"}
+            <button style={s.saveBtn} onClick={handleSave} disabled={saving}>
+              {saved ? "Settings Saved ✓" : saving ? "Saving…" : "Save Changes"}
             </button>
-            <p style={s.note}>Changes apply to the storefront immediately once connected to a backend.</p>
+            <p style={s.note}>Changes apply to the storefront immediately.</p>
           </div>
         </div>
       </div>

@@ -1,7 +1,8 @@
 "use client";
 
-import React from "react";
+import React, { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { useAuth } from "@/context/AuthContext";
 
 const navItems = [
   { label: "Dashboard", href: "/admin", icon: "📊" },
@@ -16,6 +17,17 @@ const navItems = [
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+  const { user, isAdmin, loading } = useAuth();
+
+  useEffect(() => {
+    if (!loading && (!user || !isAdmin)) {
+      router.replace("/auth");
+    }
+  }, [loading, user, isAdmin, router]);
+
+  if (loading || !user || !isAdmin) {
+    return <div style={s.wrap} />;
+  }
 
   return (
     <div style={s.wrap}>
@@ -44,10 +56,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
         <div style={s.sidebarFooter}>
           <div style={s.adminCard}>
-            <div style={s.adminAvatar}>A</div>
+            <div style={s.adminAvatar}>{(user.email?.[0] ?? "A").toUpperCase()}</div>
             <div>
-              <p style={s.adminName}>Admin</p>
-              <p style={s.adminRole}>Store Manager</p>
+              <p style={s.adminName}>{user.email}</p>
+              <p style={s.adminRole}>Admin</p>
             </div>
           </div>
           <a
@@ -94,7 +106,7 @@ const s: { [key: string]: React.CSSProperties } = {
     display: "flex", alignItems: "center", justifyContent: "center",
     fontFamily: "Georgia, serif", fontWeight: 700, color: "#8a6bd6", flexShrink: 0,
   },
-  adminName: { fontSize: 13, fontWeight: 600, color: "#fff", margin: 0 },
+  adminName: { fontSize: 13, fontWeight: 600, color: "#fff", margin: 0, maxWidth: 150, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
   adminRole: { fontSize: 11, color: "rgba(255,255,255,0.55)", margin: 0 },
   backToSite: { fontSize: 12, color: "rgba(255,255,255,0.55)", textDecoration: "none" },
 

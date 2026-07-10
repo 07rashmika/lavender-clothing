@@ -1,21 +1,38 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useCart } from "@/context/CartContext";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Button, Card, Badge, SummaryRow, EmptyState, colors, fonts } from "@/components/ui";
+import { api } from "@/lib/api";
 
-const FREE_SHIPPING_THRESHOLD = 200;
+const DEFAULT_FREE_SHIP_THRESHOLD_CENTS = 20000;
+const DEFAULT_TAX_RATE_BPS = 800;
 
 export default function BagPage() {
   const router = useRouter();
   const { items, updateQuantity, removeFromCart, subtotal } = useCart();
 
-  const shippingNote = subtotal >= FREE_SHIPPING_THRESHOLD ? "FREE" : "Calculated at checkout";
-  const tax = 0;
+  const [freeShipThresholdCents, setFreeShipThresholdCents] = useState(DEFAULT_FREE_SHIP_THRESHOLD_CENTS);
+  const [taxRateBps, setTaxRateBps] = useState(DEFAULT_TAX_RATE_BPS);
+
+  useEffect(() => {
+    api
+      .get("/settings/public")
+      .then((data) => {
+        setFreeShipThresholdCents(data.freeShipThresholdCents);
+        setTaxRateBps(data.taxRateBps);
+      })
+      .catch((err) => console.error("[bag] settings fetch failed:", err));
+  }, []);
+
+  const subtotalCents = Math.round(subtotal * 100);
+  const freeShipThreshold = freeShipThresholdCents / 100;
+  const shippingNote = subtotal >= freeShipThreshold ? "FREE" : "Calculated at checkout";
+  const tax = Math.round((subtotalCents * taxRateBps) / 10000) / 100;
   const total = subtotal + tax;
 
   return (
@@ -149,7 +166,7 @@ export default function BagPage() {
               <hr style={{ border: "none", borderTop: `1px solid ${colors.border}`, margin: "18px 0" }} />
 
               <p style={{ fontSize: 12, color: colors.textFaint, marginBottom: 8 }}>
-                🚚 Free shipping on orders over ${FREE_SHIPPING_THRESHOLD}
+                🚚 Free shipping on orders over ${freeShipThreshold}
               </p>
               <p style={{ fontSize: 12, color: colors.textFaint }}>
                 🛡 Secure payment & 30-day easy returns

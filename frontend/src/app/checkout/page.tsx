@@ -1,11 +1,15 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useCart } from "@/context/CartContext";
+import { useAuth } from "@/context/AuthContext";
+import { api } from "@/lib/api";
+import { formatMoney } from "@/lib/format";
+import type { Order } from "@/types/order";
 
 type Step = 1 | 2 | 3;
 type PaymentMethod = "card" | "cod" | null;
@@ -19,13 +23,26 @@ interface ShippingData {
   zip: string;
 }
 
-const TAX_RATE = 0.08;
-const FEE = 2.0; // shipping / COD service charge
+interface PublicSettings {
+  shippingFeeCents: number;
+  codFeeCents: number;
+  taxRateBps: number;
+  freeShipThresholdCents: number;
+}
+
+const DEFAULT_SETTINGS: PublicSettings = {
+  shippingFeeCents: 200,
+  codFeeCents: 200,
+  taxRateBps: 800,
+  freeShipThresholdCents: 20000,
+};
 
 export default function CheckoutPage() {
   const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
   const { items, subtotal, clearCart } = useCart();
 
+  const [settings, setSettings] = useState<PublicSettings>(DEFAULT_SETTINGS);
   const [step, setStep] = useState<Step>(1);
   const [shipping, setShipping] = useState<ShippingData>({
     firstName: "",
@@ -37,24 +54,36 @@ export default function CheckoutPage() {
   });
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(null);
   const [card, setCard] = useState({ number: "", expiry: "", cvv: "" });
+  const [placing, setPlacing] = useState(false);
+  const [placeError, setPlaceError] = useState<string | null>(null);
   const [placed, setPlaced] = useState(false);
-  const [orderSnapshot, setOrderSnapshot] = useState<{
-    orderNumber: string;
-    orderDate: string;
-    items: typeof items;
-    subtotal: number;
-    fee: number;
-    tax: number;
-    total: number;
-    shipping: ShippingData;
-    paymentMethod: PaymentMethod;
-  } | null>(null);
+  const [orderSnapshot, setOrderSnapshot] = useState<Order | null>(null);
+
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.replace("/auth");
+    }
+  }, [authLoading, user, router]);
+
+  useEffect(() => {
+    api
+      .get("/settings/public")
+      .then(setSettings)
+      .catch((err) => console.error("[checkout] settings fetch failed:", err));
+  }, []);
 
   const shippingComplete = Object.values(shipping).every((v) => v.trim() !== "");
   const cardComplete = card.number.trim() !== "" && card.expiry.trim() !== "" && card.cvv.trim() !== "";
 
-  const tax = subtotal * TAX_RATE;
-  const total = subtotal + FEE + tax;
+  const subtotalCents = Math.round(subtotal * 100);
+  const feePreviewCents =
+    paymentMethod === "cod"
+      ? settings.codFeeCents
+      : subtotalCents >= settings.freeShipThresholdCents
+        ? 0
+        : settings.shippingFeeCents;
+  const taxPreviewCents = Math.round((subtotalCents * settings.taxRateBps) / 10000);
+  const totalPreviewCents = subtotalCents + feePreviewCents + taxPreviewCents;
 
   const handleShippingField = (field: keyof ShippingData, value: string) => {
     setShipping((prev) => ({ ...prev, [field]: value }));
@@ -75,23 +104,40 @@ export default function CheckoutPage() {
     if (cardComplete) setStep(3);
   };
 
-  const placeOrder = () => {
-    const orderNumber = "LAV-" + Math.floor(1000 + Math.random() * 9000);
-    const orderDate = new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
-    setOrderSnapshot({
-      orderNumber,
-      orderDate,
-      items: [...items],
-      subtotal,
-      fee: FEE,
-      tax,
-      total,
-      shipping: { ...shipping },
-      paymentMethod,
-    });
-    setPlaced(true);
-    clearCart();
+  const placeOrder = async () => {
+    if (!paymentMethod) return;
+    setPlaceError(null);
+    setPlacing(true);
+    try {
+      const order: Order = await api.post("/orders", {
+        items: items.map((i) => ({
+          productId: i.id,
+          quantity: i.quantity,
+          color: i.color,
+          size: i.size,
+        })),
+        shippingFirstName: shipping.firstName,
+        shippingLastName: shipping.lastName,
+        shippingAddress: shipping.address,
+        shippingCity: shipping.city,
+        shippingState: shipping.state,
+        shippingZip: shipping.zip,
+        payment: paymentMethod === "card" ? "CARD" : "COD",
+      });
+      setOrderSnapshot(order);
+      setPlaced(true);
+      clearCart();
+    } catch (err) {
+      console.error("[checkout] place order failed:", err);
+      setPlaceError("We couldn't place your order. Please check your bag and try again.");
+    } finally {
+      setPlacing(false);
+    }
   };
+
+  if (authLoading || !user) {
+    return <div style={s.page} />;
+  }
 
   if (items.length === 0 && !placed) {
     return (
@@ -141,7 +187,9 @@ export default function CheckoutPage() {
                 </div>
                 <div style={{ textAlign: "right" }}>
                   <p style={s.invoiceLabel}>Order Date</p>
-                  <p style={s.invoiceValueAccent}>{orderSnapshot.orderDate}</p>
+                  <p style={s.invoiceValueAccent}>
+                    {new Date(orderSnapshot.createdAt).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
+                  </p>
                 </div>
               </div>
 
@@ -149,39 +197,40 @@ export default function CheckoutPage() {
                 <div>
                   <p style={s.invoiceLabel}>Shipping Address</p>
                   <p style={s.invoiceText}>
-                    {orderSnapshot.shipping.firstName} {orderSnapshot.shipping.lastName}<br />
-                    {orderSnapshot.shipping.address}<br />
-                    {orderSnapshot.shipping.city}, {orderSnapshot.shipping.state} {orderSnapshot.shipping.zip}
+                    {orderSnapshot.shippingFirstName} {orderSnapshot.shippingLastName}<br />
+                    {orderSnapshot.shippingAddress}<br />
+                    {orderSnapshot.shippingCity}, {orderSnapshot.shippingState} {orderSnapshot.shippingZip}
                   </p>
                 </div>
                 <div style={{ textAlign: "right" }}>
                   <p style={s.invoiceLabel}>Payment Method</p>
                   <p style={s.invoiceText}>
-                    {orderSnapshot.paymentMethod === "card" ? "💳 Card" : "📦 Cash on Delivery"}
+                    {orderSnapshot.payment === "CARD" ? "💳 Card" : "📦 Cash on Delivery"}
                   </p>
                 </div>
               </div>
 
               <p style={s.invoiceLabel}>Order Items</p>
               {orderSnapshot.items.map((item) => (
-                <div key={`${item.id}-${item.color}-${item.size}`} style={s.invoiceItemRow}>
+                <div key={item.id} style={s.invoiceItemRow}>
                   <div>
                     <p style={s.invoiceItemName}>{item.name}</p>
                     <p style={s.invoiceItemMeta}>Qty: {item.quantity}</p>
                   </div>
-                  <p style={s.invoiceItemPrice}>${(item.price * item.quantity).toFixed(2)}</p>
+                  <p style={s.invoiceItemPrice}>{formatMoney(item.priceCents * item.quantity)}</p>
                 </div>
               ))}
 
               <div style={s.invoiceTotals}>
-                <SummaryRow label="Subtotal" value={`$${orderSnapshot.subtotal.toFixed(2)}`} />
+                <SummaryRow label="Subtotal" value={formatMoney(orderSnapshot.subtotalCents)} />
                 <SummaryRow
-                  label={orderSnapshot.paymentMethod === "cod" ? "COD Service Charge" : "Shipping"}
-                  value={`$${orderSnapshot.fee.toFixed(2)}`}
+                  label={orderSnapshot.payment === "COD" ? "COD Service Charge" : "Shipping"}
+                  value={formatMoney(orderSnapshot.feeCents)}
                 />
+                <SummaryRow label="Tax" value={formatMoney(orderSnapshot.taxCents)} />
                 <div style={{ ...s.totalRow, marginTop: 8, marginBottom: 0 }}>
                   <span>Total</span>
-                  <span style={{ color: "#c6558a" }}>${orderSnapshot.total.toFixed(2)}</span>
+                  <span style={{ color: "#c6558a" }}>{formatMoney(orderSnapshot.totalCents)}</span>
                 </div>
               </div>
             </div>
@@ -297,13 +346,15 @@ export default function CheckoutPage() {
 
                 {paymentMethod === "cod" && (
                   <div style={s.codNotice}>
-                    ⓘ Please have the exact amount of ${total.toFixed(2)} ready for our delivery
-                    partner. A ${FEE.toFixed(2)} delivery fee applies.
+                    ⓘ Please have the exact amount of {formatMoney(totalPreviewCents)} ready for our delivery
+                    partner. A {formatMoney(feePreviewCents)} delivery fee applies.
                   </div>
                 )}
 
-                <button style={{ ...s.placeOrderBtn, marginTop: 20 }} onClick={placeOrder}>
-                  Place Order →
+                {placeError && <p style={{ color: "#c0395a", fontSize: 13, marginTop: 12 }}>{placeError}</p>}
+
+                <button style={{ ...s.placeOrderBtn, marginTop: 20, opacity: placing ? 0.7 : 1 }} onClick={placeOrder} disabled={placing}>
+                  {placing ? "Placing Order…" : "Place Order →"}
                 </button>
               </section>
             )}
@@ -324,17 +375,17 @@ export default function CheckoutPage() {
             ))}
 
             <div style={{ borderTop: "1px solid #eee", margin: "14px 0", paddingTop: "14px" }}>
-              <SummaryRow label="Subtotal" value={`$${subtotal.toFixed(2)}`} />
+              <SummaryRow label="Subtotal" value={formatMoney(subtotalCents)} />
               <SummaryRow
                 label={paymentMethod === "cod" ? "COD Service Charge" : "Shipping"}
-                value={`$${FEE.toFixed(2)}`}
+                value={formatMoney(feePreviewCents)}
               />
-              <SummaryRow label="Tax" value={`$${tax.toFixed(2)}`} />
+              <SummaryRow label="Tax" value={formatMoney(taxPreviewCents)} />
             </div>
 
             <div style={s.totalRow}>
               <span>Total</span>
-              <span style={{ color: "#c6558a" }}>${total.toFixed(2)}</span>
+              <span style={{ color: "#c6558a" }}>{formatMoney(totalPreviewCents)}</span>
             </div>
 
             <p style={s.secureNote}>🔒 Secure checkout powered by Lavender Payments</p>

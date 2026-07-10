@@ -6,21 +6,9 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useCart } from "@/context/CartContext";
 import { useWishlist } from "@/context/WishlistContext";
-
-const allProducts = [
-  { id: 1, name: "Silk Ruffle Blouse", price: "$89.00", img: "/lav-p5.jpg", category: "Blouses", colors: ["#c8a0d0", "#e05080"], tag: "New" },
-  { id: 2, name: "Puff Sleeve Crop", price: "$55.00", img: "/lav-p1.jpg", category: "Crop Tops", colors: ["#e05080", "#333"], tag: "Hot" },
-  { id: 3, name: "Meadow Floral Frock", price: "$120.00", img: "/lav-p2.jpg", category: "Frocks", colors: ["#c8a0d0"], tag: "Limited" },
-  { id: 4, name: "Linen Button-up", price: "$72.00", img: "/lav-p3.jpg", category: "Blouses", colors: ["#f5f0e8", "#333"], tag: "" },
-  { id: 5, name: "Essential Crop Top", price: "$42.00", img: "/lav-p6.jpg", category: "Crop Tops", colors: ["#333", "#c8a0d0"], tag: "" },
-  { id: 6, name: "Tiered Ribbon Frock", price: "$135.00", img: "/lav-p4.jpg", category: "Frocks", colors: ["#c8a0d0", "#e05080"], tag: "Limited" },
-  { id: 7, name: "Boho Fringe Kimono", price: "$89.00", img: "/lav-p5.jpg", category: "Blouses", colors: ["#f5f0e8"], tag: "New" },
-  { id: 8, name: "Lavender Mini Dress", price: "$98.00", img: "/lav-p2.jpg", category: "Frocks", colors: ["#c8a0d0"], tag: "" },
-  { id: 9, name: "Yellow Chic Top", price: "$64.00", img: "/lav-p1.jpg", category: "Crop Tops", colors: ["#f5c518", "#e05080"], tag: "Hot" },
-  { id: 10, name: "Floral Midi Dress", price: "$112.00", img: "/lav-p4.jpg", category: "Frocks", colors: ["#c8a0d0", "#333"], tag: "" },
-  { id: 11, name: "Classic Linen Top", price: "$58.00", img: "/lav-p3.jpg", category: "Blouses", colors: ["#f5f0e8", "#c8a0d0"], tag: "" },
-  { id: 12, name: "Ruched Crop", price: "$47.00", img: "/lav-p6.jpg", category: "Crop Tops", colors: ["#e05080"], tag: "New" },
-];
+import { api } from "@/lib/api";
+import { formatMoney, productImageUrl } from "@/lib/format";
+import type { Product } from "@/types/product";
 
 const ITEMS_PER_PAGE = 6;
 const categories = ["All Items", "Blouses", "Crop Tops", "Frocks"];
@@ -46,19 +34,27 @@ function ShopPageContent() {
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState("Newest");
   const [currentPage, setCurrentPage] = useState(1);
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
   const searchQuery = (searchParams.get("search") || "").trim().toLowerCase();
+
+  useEffect(() => {
+    api
+      .get("/products?status=ACTIVE")
+      .then((data) => setAllProducts(data ?? []))
+      .catch((err) => console.error("[shop] fetch failed:", err));
+  }, []);
 
   useEffect(() => {
     setCurrentPage(1);
   }, [searchQuery]);
 
-  const handleWishlistClick = (p: (typeof allProducts)[number], e: React.MouseEvent) => {
+  const handleWishlistClick = (p: Product, e: React.MouseEvent) => {
     e.stopPropagation();
     toggleWishlist({
-      id: String(p.id),
+      id: p.id,
       name: p.name,
-      price: parseFloat(p.price.replace("$", "")),
-      image: p.img,
+      price: p.priceCents / 100,
+      image: p.images[0] ? productImageUrl(p.images[0]) : "",
       badge: p.tag || undefined,
       colorSwatch: p.colors[0],
     });
@@ -81,8 +77,8 @@ function ShopPageContent() {
   });
 
   const sorted = [...filtered].sort((a, b) => {
-    if (sortBy === "Price: Low to High") return parseFloat(a.price.slice(1)) - parseFloat(b.price.slice(1));
-    if (sortBy === "Price: High to Low") return parseFloat(b.price.slice(1)) - parseFloat(a.price.slice(1));
+    if (sortBy === "Price: Low to High") return a.priceCents - b.priceCents;
+    if (sortBy === "Price: High to Low") return b.priceCents - a.priceCents;
     return 0;
   });
 
@@ -195,7 +191,9 @@ function ShopPageContent() {
                 onClick={() => router.push(`/shop/${p.id}`)}
               >
                 <div style={s.cardImgWrap}>
-                  <Image src={p.img} alt={p.name} fill sizes="(max-width: 768px) 50vw, 25vw" style={s.cardImg} />
+                  {p.images[0] && (
+                    <Image src={productImageUrl(p.images[0])} alt={p.name} fill sizes="(max-width: 768px) 50vw, 25vw" style={s.cardImg} />
+                  )}
                   {p.tag && (
                     <span style={{
                       ...s.tag,
@@ -215,7 +213,7 @@ function ShopPageContent() {
                 <div style={s.cardInfo}>
                   <p style={s.cardName}>{p.name}</p>
                   <div style={s.cardBottom}>
-                    <p style={s.cardPrice}>{p.price}</p>
+                    <p style={s.cardPrice}>{formatMoney(p.priceCents)}</p>
                     <div style={s.cardColors}>
                       {p.colors.map(c => (
                         <span key={c} style={{ ...s.colorDot, backgroundColor: c }} />
@@ -228,10 +226,10 @@ function ShopPageContent() {
                     onClick={(e) => {
                       e.stopPropagation();
                       addToCart({
-                        id: String(p.id),
+                        id: p.id,
                         name: p.name,
-                        price: parseFloat(p.price.replace("$", "")),
-                        image: p.img,
+                        price: p.priceCents / 100,
+                        image: p.images[0] ? productImageUrl(p.images[0]) : "",
                         color: "Default",
                         colorSwatch: p.colors[0],
                         size: selectedSize,

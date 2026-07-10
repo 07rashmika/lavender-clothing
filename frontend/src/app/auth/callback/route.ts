@@ -27,9 +27,26 @@ export async function GET(request: NextRequest) {
       }
     );
 
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
-    if (!error) {
-      return NextResponse.redirect(`${origin}${next}`);
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+    if (!error && data.session) {
+      const accessToken = data.session.access_token;
+      let isAdmin = false;
+      try {
+        await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/sync`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+        const meRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/me`, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+        if (meRes.ok) {
+          const me = await meRes.json();
+          isAdmin = me?.role === "ADMIN";
+        }
+      } catch {
+        // fall through to default redirect target
+      }
+      return NextResponse.redirect(`${origin}${isAdmin ? "/admin" : next}`);
     }
   }
 

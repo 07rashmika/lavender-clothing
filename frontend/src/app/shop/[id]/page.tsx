@@ -1,42 +1,82 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { useCart } from "@/context/CartContext";
+import { useWishlist } from "@/context/WishlistContext";
+import { api } from "@/lib/api";
+import { formatMoney, productImageUrl } from "@/lib/format";
+import type { Product } from "@/types/product";
 
-const products = [
-  { id: 1, name: "Boho Fringe Kimono", price: 89, originalPrice: null, img: "/lav-p5.jpg", imgs: ["/lav-p5.jpg", "/lav-p3.jpg", "/lav-p4.jpg", "/lav-p6.jpg"], category: "Blouses", tag: "New", colors: ["#c8d8f0", "#3a1260", "#f5f0e8"], description: "A beautifully crafted boho kimono with fringe detailing. Perfect for layering over your favourite outfits for a relaxed, stylish look.", fabric: "100% Lightweight Cotton. Machine washable. Do not bleach. Handle with love.", badge: "New" },
-  { id: 2, name: "Yellow Chic Blouse", price: 64, originalPrice: null, img: "/lav-p1.jpg", imgs: ["/lav-p1.jpg", "/lav-p2.jpg", "/lav-p5.jpg", "/lav-p3.jpg"], category: "Blouses", tag: "Hot", colors: ["#f5c518", "#e05080", "#333"], description: "A vibrant yellow blouse with a contemporary cut. Bold, fun and effortlessly chic for any occasion.", fabric: "95% Polyester, 5% Elastane. Gentle machine wash. Iron on low heat.", badge: "Hot" },
-  { id: 3, name: "Floral Midi Dress", price: 112, originalPrice: 140, img: "/lav-p2.jpg", imgs: ["/lav-p2.jpg", "/lav-p4.jpg", "/lav-p1.jpg", "/lav-p5.jpg"], category: "Frocks", tag: "", colors: ["#c8a0d0", "#f5f0e8"], description: "A romantic floral midi dress with a flattering silhouette. From garden parties to dinner dates, this dress does it all.", fabric: "100% Chiffon. Dry clean only. Store hanging to avoid creases.", badge: "" },
-  { id: 4, name: "Classic Navy Jumpsuit", price: 95, originalPrice: null, img: "/lav-p6.jpg", imgs: ["/lav-p6.jpg", "/lav-p3.jpg", "/lav-p2.jpg", "/lav-p1.jpg"], category: "Frocks", tag: "New", colors: ["#1a2a4a", "#c8a0d0", "#f5f0e8"], description: "A sleek navy jumpsuit with polka dot detailing. Effortlessly put-together for work or weekend wear.", fabric: "100% Crepe fabric. Hand wash cold. Do not tumble dry.", badge: "New" },
-  { id: 5, name: "Summer Duo Set", price: 138, originalPrice: 170, img: "/lav-p3.jpg", imgs: ["/lav-p3.jpg", "/lav-p1.jpg", "/lav-p6.jpg", "/lav-p4.jpg"], category: "Blouses", tag: "", colors: ["#f5f0e8", "#c8a0d0", "#333"], description: "A matching two-piece set perfect for sunny days. Mix and match the top and bottom for versatile styling options.", fabric: "80% Cotton, 20% Linen blend. Machine wash cold. Tumble dry low.", badge: "" },
-  { id: 6, name: "Boho Straw Hat Look", price: 76, originalPrice: null, img: "/lav-p4.jpg", imgs: ["/lav-p4.jpg", "/lav-p5.jpg", "/lav-p2.jpg", "/lav-p3.jpg"], category: "Frocks", tag: "Sale", colors: ["#c8a0d0", "#f5f0e8", "#e05080"], description: "A dreamy boho-inspired look complete with flowing silhouette. Styled with a straw hat for that perfect summer aesthetic.", fabric: "100% Viscose. Hand wash only. Dry flat. Iron on low heat.", badge: "Sale" },
-];
-
-const sizes = ["XS", "S", "M", "L", "XL"];
+const COLOR_NAMES = ["Soft Lavender", "Deep Purple", "Cream", "Navy", "Blush", "Gold"];
 
 export default function ProductDetailPage() {
-  const params = useParams();
+  const params = useParams<{ id: string }>();
   const router = useRouter();
-  const id = Number(params.id);
-  const product = products.find(p => p.id === id) || products[0];
+  const { addToCart } = useCart();
+  const { toggleWishlist, isInWishlist } = useWishlist();
 
+  const [product, setProduct] = useState<Product | null>(null);
   const [selectedImg, setSelectedImg] = useState(0);
   const [selectedSize, setSelectedSize] = useState("S");
   const [selectedColor, setSelectedColor] = useState(0);
-  const [inWishlist, setInWishlist] = useState(false);
   const [addedToBag, setAddedToBag] = useState(false);
   const [openSection, setOpenSection] = useState<string | null>("fabric");
 
+  useEffect(() => {
+    api
+      .get(`/products/${params.id}`)
+      .then((data: Product) => {
+        setProduct(data);
+        setSelectedSize(data.sizes[0] ?? "S");
+      })
+      .catch((err) => console.error("[shop/detail] fetch failed:", err));
+  }, [params.id]);
+
+  const inWishlist = product ? isInWishlist(product.id) : false;
+
   const handleAddToBag = () => {
+    if (!product) return;
+    addToCart({
+      id: product.id,
+      name: product.name,
+      price: product.priceCents / 100,
+      image: product.images[0] ? productImageUrl(product.images[0]) : "",
+      color: COLOR_NAMES[selectedColor] || "Default",
+      colorSwatch: product.colors[selectedColor],
+      size: selectedSize,
+      badge: product.tag || undefined,
+    });
     setAddedToBag(true);
     setTimeout(() => setAddedToBag(false), 2000);
+  };
+
+  const handleToggleWishlist = () => {
+    if (!product) return;
+    toggleWishlist({
+      id: product.id,
+      name: product.name,
+      price: product.priceCents / 100,
+      image: product.images[0] ? productImageUrl(product.images[0]) : "",
+      badge: product.tag || undefined,
+      colorSwatch: product.colors[0],
+    });
   };
 
   const toggleSection = (section: string) => {
     setOpenSection(openSection === section ? null : section);
   };
+
+  if (!product) {
+    return (
+      <div style={s.page}>
+        <Navbar activePage="shop" />
+        <p style={{ padding: 48, color: "#888" }}>Loading…</p>
+      </div>
+    );
+  }
 
   return (
     <div style={s.page}>
@@ -57,14 +97,16 @@ export default function ProductDetailPage() {
         {/* LEFT — Images */}
         <div style={s.imageSection}>
           <div style={s.mainImgWrap}>
-            <Image src={product.imgs[selectedImg]} alt={product.name} fill sizes="(max-width: 768px) 100vw, 50vw" style={s.mainImg} />
-            {product.badge && (
+            {product.images[selectedImg] && (
+              <Image src={productImageUrl(product.images[selectedImg])} alt={product.name} fill sizes="(max-width: 768px) 100vw, 50vw" style={s.mainImg} />
+            )}
+            {product.tag && (
               <span style={{
                 ...s.badge,
-                background: product.badge === "Hot" ? "#e05080" : product.badge === "Sale" ? "#7b2fa8" : "#5b2d8e"
-              }}>{product.badge}</span>
+                background: product.tag === "Hot" ? "#e05080" : product.tag === "Sale" ? "#7b2fa8" : "#5b2d8e"
+              }}>{product.tag}</span>
             )}
-            <button style={s.wishBtnImg} onClick={() => setInWishlist(!inWishlist)} className="wish-img-btn">
+            <button style={s.wishBtnImg} onClick={handleToggleWishlist} className="wish-img-btn">
               <svg width="18" height="18" viewBox="0 0 24 24" fill={inWishlist ? "#c0395a" : "none"} stroke="#c0395a" strokeWidth="2">
                 <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
               </svg>
@@ -73,14 +115,14 @@ export default function ProductDetailPage() {
 
           {/* Thumbnails */}
           <div style={s.thumbs}>
-            {product.imgs.map((img, i) => (
+            {product.images.map((img, i) => (
               <div
                 key={i}
                 style={{...s.thumb, border: selectedImg === i ? "2.5px solid #c0395a" : "2px solid #e8dce8"}}
                 onClick={() => setSelectedImg(i)}
                 className="thumb"
               >
-                <Image src={img} alt="" fill sizes="68px" style={s.thumbImg} />
+                <Image src={productImageUrl(img)} alt="" fill sizes="68px" style={s.thumbImg} />
               </div>
             ))}
           </div>
@@ -93,9 +135,9 @@ export default function ProductDetailPage() {
 
           {/* Price */}
           <div style={s.priceRow}>
-            <span style={s.price}>${product.price}.00</span>
-            {product.originalPrice && (
-              <span style={s.originalPrice}>${product.originalPrice}.00</span>
+            <span style={s.price}>{formatMoney(product.priceCents)}</span>
+            {product.compareAtPriceCents && (
+              <span style={s.originalPrice}>{formatMoney(product.compareAtPriceCents)}</span>
             )}
           </div>
 
@@ -105,7 +147,7 @@ export default function ProductDetailPage() {
           <div style={s.section}>
             <p style={s.sectionLabel}>
               Color: <span style={s.colorName}>
-                {["Soft Lavender", "Deep Purple", "Cream", "Navy", "Blush", "Gold"][selectedColor] || "Soft Lavender"}
+                {COLOR_NAMES[selectedColor] || "Soft Lavender"}
               </span>
             </p>
             <div style={s.colorRow}>
@@ -131,7 +173,7 @@ export default function ProductDetailPage() {
               <span style={s.sizeGuide}>Size Guide</span>
             </div>
             <div style={s.sizeRow}>
-              {sizes.map(sz => (
+              {product.sizes.map(sz => (
                 <button
                   key={sz}
                   onClick={() => setSelectedSize(sz)}
@@ -156,7 +198,7 @@ export default function ProductDetailPage() {
           <button
             style={{...s.wishlistBtn, color: inWishlist ? "#c0395a" : "#2d1a3a"}}
             className="wishlist-btn"
-            onClick={() => setInWishlist(!inWishlist)}
+            onClick={handleToggleWishlist}
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill={inWishlist ? "#c0395a" : "none"} stroke={inWishlist ? "#c0395a" : "#2d1a3a"} strokeWidth="2" style={{ marginRight: 8 }}>
               <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>

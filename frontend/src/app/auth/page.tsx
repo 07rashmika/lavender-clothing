@@ -3,7 +3,7 @@ import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase";
-import { syncUserWithBackend } from "@/context/AuthContext";
+import { syncUserWithBackend, fetchRole } from "@/context/AuthContext";
 
 function getPasswordStrength(password: string): { score: number; label: string; color: string } {
   if (password.length === 0) return { score: 0, label: "", color: "#e8dce8" };
@@ -52,8 +52,12 @@ export default function AuthPage() {
     const { data, error } = await supabase.auth.signInWithPassword({ email: loginEmail, password: loginPassword });
     setLoading(false);
     if (error) { setError(error.message); return; }
-    if (data.session) await syncUserWithBackend(data.session.access_token);
-    router.push("/home");
+    let role = null;
+    if (data.session) {
+      await syncUserWithBackend(data.session.access_token);
+      role = await fetchRole();
+    }
+    router.push(role === "ADMIN" ? "/admin" : "/home");
   };
 
   const handleSignup = async () => {
@@ -86,7 +90,8 @@ export default function AuthPage() {
     }
 
     await syncUserWithBackend(data.session.access_token);
-    router.push("/home");
+    const role = await fetchRole();
+    router.push(role === "ADMIN" ? "/admin" : "/home");
   };
 
   const handleGoogleSignIn = async () => {

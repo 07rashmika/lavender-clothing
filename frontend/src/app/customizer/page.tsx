@@ -1,7 +1,10 @@
 "use client";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { useAuth } from "@/context/AuthContext";
+import { api } from "@/lib/api";
 
 const silhouettes = ["Classic T-Shirt", "Trendy Crop Top"];
 const fits = ["Relaxed", "Regular", "Slim Fit"];
@@ -19,6 +22,8 @@ const inspirations = [
 ];
 
 export default function CustomizerPage() {
+  const router = useRouter();
+  const { user } = useAuth();
   const [selectedSilhouette, setSelectedSilhouette] = useState(0);
   const [selectedFit, setSelectedFit] = useState("Regular");
   const [selectedSize, setSelectedSize] = useState("S");
@@ -27,8 +32,37 @@ export default function CustomizerPage() {
   const [selectedFont, setSelectedFont] = useState("Playfair Display");
   const [selectedMaterial, setSelectedMaterial] = useState("Organic Cotton");
   const [quantity, setQuantity] = useState(1);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const estimatedPrice = 45 + (selectedMaterial === "Silk Touch" ? 20 : selectedMaterial === "Bamboo Blend" ? 10 : 0);
+
+  const handleSubmitRequest = async () => {
+    if (!user) {
+      router.push("/auth");
+      return;
+    }
+    setSubmitError(null);
+    setSubmitting(true);
+    try {
+      await api.post("/customizations", {
+        fabric: selectedMaterial,
+        color: colorNames[selectedColor],
+        cut: `${silhouettes[selectedSilhouette]} — ${selectedFit}`,
+        size: selectedSize,
+        notes: `Quantity: ${quantity}${customText ? `. Custom text: "${customText}" (${selectedFont})` : ""}`,
+        estimatedPriceCents: Math.round(estimatedPrice * 100 * quantity),
+      });
+      setSubmitted(true);
+      setTimeout(() => setSubmitted(false), 3000);
+    } catch (err) {
+      console.error("[customizer] submit failed:", err);
+      setSubmitError("Failed to submit your request. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <div style={s.page}>
@@ -208,7 +242,7 @@ export default function CustomizerPage() {
             <p style={s.uploadSub}>Supports PNG, JPG, SVG only</p>
           </div>
 
-          {/* Total + Add to Bag */}
+          {/* Total + Submit */}
           <div style={s.bottomRow}>
             <div>
               <p style={s.totalLabel}>ESTIMATED TOTAL</p>
@@ -220,9 +254,12 @@ export default function CustomizerPage() {
                 <span style={s.qtyNum}>{quantity}</span>
                 <button style={s.qtyBtn} onClick={() => setQuantity(q => q + 1)}>+</button>
               </div>
-              <button style={s.addBagBtn} className="add-bag-btn">🛍 Add to Bag</button>
+              <button style={s.addBagBtn} className="add-bag-btn" onClick={handleSubmitRequest} disabled={submitting}>
+                {submitted ? "✓ Request Submitted!" : submitting ? "Submitting…" : "✦ Submit Custom Request"}
+              </button>
             </div>
           </div>
+          {submitError && <p style={{ color: "#c0395a", fontSize: 12.5, marginTop: 10 }}>{submitError}</p>}
         </div>
       </div>
 

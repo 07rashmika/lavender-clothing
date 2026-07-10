@@ -1,40 +1,52 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import { api } from "@/lib/api";
+import { formatMoney } from "@/lib/format";
+import type { Order, OrderStatus } from "@/types/order";
 
-interface Order {
-  id: string;
-  customer: string;
-  date: string;
-  items: number;
-  total: string;
-  payment: "Card" | "Cash on Delivery";
-  status: "Processing" | "Shipped" | "Delivered" | "Cancelled";
-}
+const statusOptions: OrderStatus[] = ["PROCESSING", "SHIPPED", "DELIVERED", "CANCELLED"];
 
-const initialOrders: Order[] = [
-  { id: "#LV-89021", customer: "Sophie Chen", date: "Oct 12, 2024", items: 2, total: "£245.00", payment: "Card", status: "Shipped" },
-  { id: "#LV-89020", customer: "Amara Silva", date: "Oct 11, 2024", items: 1, total: "£89.00", payment: "Cash on Delivery", status: "Processing" },
-  { id: "#LV-89019", customer: "Priya Fernando", date: "Oct 10, 2024", items: 3, total: "£312.00", payment: "Card", status: "Delivered" },
-  { id: "#LV-89018", customer: "Chloe Bandara", date: "Oct 9, 2024", items: 1, total: "£120.00", payment: "Card", status: "Processing" },
-  { id: "#LV-89017", customer: "Nisha Perera", date: "Oct 8, 2024", items: 2, total: "£178.00", payment: "Cash on Delivery", status: "Cancelled" },
-];
+const statusLabel: Record<OrderStatus, string> = {
+  PROCESSING: "Processing",
+  SHIPPED: "Shipped",
+  DELIVERED: "Delivered",
+  CANCELLED: "Cancelled",
+};
 
-const statusOptions: Order["status"][] = ["Processing", "Shipped", "Delivered", "Cancelled"];
+const paymentLabel: Record<Order["payment"], string> = {
+  CARD: "Card",
+  COD: "Cash on Delivery",
+};
 
-const statusStyle: Record<Order["status"], React.CSSProperties> = {
-  Processing: { background: "#ede4f7", color: "#7c5cbf" },
-  Shipped: { background: "#fdf0d8", color: "#a3760f" },
-  Delivered: { background: "#e3f3e8", color: "#3a9d5f" },
-  Cancelled: { background: "#ece2f7", color: "#8a7a94" },
+const statusStyle: Record<OrderStatus, React.CSSProperties> = {
+  PROCESSING: { background: "#ede4f7", color: "#7c5cbf" },
+  SHIPPED: { background: "#fdf0d8", color: "#a3760f" },
+  DELIVERED: { background: "#e3f3e8", color: "#3a9d5f" },
+  CANCELLED: { background: "#ece2f7", color: "#8a7a94" },
 };
 
 export default function AdminOrdersPage() {
-  const [orders, setOrders] = useState(initialOrders);
-  const [filter, setFilter] = useState<"All" | Order["status"]>("All");
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [filter, setFilter] = useState<"All" | OrderStatus>("All");
 
-  const updateStatus = (id: string, status: Order["status"]) => {
-    setOrders((prev) => prev.map((o) => (o.id === id ? { ...o, status } : o)));
+  useEffect(() => {
+    api
+      .get("/orders")
+      .then((data) => setOrders(data ?? []))
+      .catch((err) => console.error("[admin/orders] fetch failed:", err));
+  }, []);
+
+  const updateStatus = async (id: string, status: OrderStatus) => {
+    const prev = orders;
+    setOrders((cur) => cur.map((o) => (o.id === id ? { ...o, status } : o)));
+    try {
+      await api.patch(`/orders/${id}/status`, { status });
+    } catch (err) {
+      console.error("[admin/orders] status update failed:", err);
+      setOrders(prev);
+      alert("Failed to update order status.");
+    }
   };
 
   const filtered = filter === "All" ? orders : orders.filter((o) => o.status === filter);
@@ -51,7 +63,7 @@ export default function AdminOrdersPage() {
             onClick={() => setFilter(f)}
             style={{ ...s.filterBtn, ...(filter === f ? s.filterBtnActive : {}) }}
           >
-            {f}
+            {f === "All" ? "All" : statusLabel[f]}
           </button>
         ))}
       </div>
@@ -72,25 +84,32 @@ export default function AdminOrdersPage() {
           <tbody>
             {filtered.map((o) => (
               <tr key={o.id}>
-                <td style={s.tdBold}>{o.id}</td>
-                <td style={s.td}>{o.customer}</td>
-                <td style={s.td}>{o.date}</td>
-                <td style={s.td}>{o.items}</td>
-                <td style={s.td}>{o.payment}</td>
-                <td style={{ ...s.tdBold, textAlign: "right" }}>{o.total}</td>
+                <td style={s.tdBold}>{o.orderNumber}</td>
+                <td style={s.td}>{o.user?.fullName || o.user?.email || o.shippingFirstName}</td>
+                <td style={s.td}>{new Date(o.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</td>
+                <td style={s.td}>{o.items.reduce((sum, i) => sum + i.quantity, 0)}</td>
+                <td style={s.td}>{paymentLabel[o.payment]}</td>
+                <td style={{ ...s.tdBold, textAlign: "right" }}>{formatMoney(o.totalCents)}</td>
                 <td style={s.td}>
                   <select
                     value={o.status}
-                    onChange={(e) => updateStatus(o.id, e.target.value as Order["status"])}
+                    onChange={(e) => updateStatus(o.id, e.target.value as OrderStatus)}
                     style={{ ...s.statusSelect, ...statusStyle[o.status] }}
                   >
                     {statusOptions.map((opt) => (
-                      <option key={opt} value={opt}>{opt}</option>
+                      <option key={opt} value={opt}>{statusLabel[opt]}</option>
                     ))}
                   </select>
                 </td>
               </tr>
             ))}
+            {filtered.length === 0 && (
+              <tr>
+                <td colSpan={7} style={{ ...s.td, textAlign: "center", padding: "32px 0", color: "#a89ab0" }}>
+                  No orders found.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>

@@ -1,43 +1,41 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { api } from "@/lib/api";
+import { formatMoney, formatProductStatus, productImageUrl } from "@/lib/format";
+import type { Product } from "@/types/product";
 
-interface Product {
-  id: number;
-  name: string;
-  category: string;
-  price: string;
-  stock: number;
-  status: "Active" | "Draft" | "Out of Stock";
-  img: string;
-}
-
-const initialProducts: Product[] = [
-  { id: 1, name: "Silk Ruffle Blouse", category: "Blouses", price: "£89.00", stock: 24, status: "Active", img: "/lav-p5.jpg" },
-  { id: 2, name: "Puff Sleeve Crop", category: "Crop Tops", price: "£55.00", stock: 12, status: "Active", img: "/lav-p1.jpg" },
-  { id: 3, name: "Meadow Floral Frock", category: "Frocks", price: "£120.00", stock: 0, status: "Out of Stock", img: "/lav-p2.jpg" },
-  { id: 4, name: "Linen Button-up", category: "Blouses", price: "£72.00", stock: 8, status: "Active", img: "/lav-p3.jpg" },
-  { id: 5, name: "Essential Crop Top", category: "Crop Tops", price: "£42.00", stock: 30, status: "Active", img: "/lav-p6.jpg" },
-  { id: 6, name: "Tiered Ribbon Frock", category: "Frocks", price: "£135.00", stock: 3, status: "Draft", img: "/lav-p4.jpg" },
-];
-
-const statusStyle: Record<Product["status"], React.CSSProperties> = {
-  Active: { background: "#e3f3e8", color: "#3a9d5f" },
-  Draft: { background: "#f0eaf5", color: "#8a6d9e" },
-  "Out of Stock": { background: "#ede4f7", color: "#7c5cbf" },
+const statusStyle: Record<string, React.CSSProperties> = {
+  ACTIVE: { background: "#e3f3e8", color: "#3a9d5f" },
+  DRAFT: { background: "#f0eaf5", color: "#8a6d9e" },
+  OUT_OF_STOCK: { background: "#ede4f7", color: "#7c5cbf" },
 };
 
 export default function AdminProductsPage() {
   const router = useRouter();
-  const [products, setProducts] = useState(initialProducts);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+
+  useEffect(() => {
+    api
+      .get("/products")
+      .then((data) => setProducts(data ?? []))
+      .catch((err) => console.error("[admin/products] fetch failed:", err))
+      .finally(() => setLoading(false));
+  }, []);
 
   const filtered = products.filter((p) => p.name.toLowerCase().includes(search.toLowerCase()));
 
-  const handleDelete = (id: number) => {
-    if (confirm("Delete this product? This cannot be undone.")) {
+  const handleDelete = async (id: string) => {
+    if (!confirm("Delete this product? This cannot be undone.")) return;
+    try {
+      await api.delete(`/products/${id}`);
       setProducts((prev) => prev.filter((p) => p.id !== id));
+    } catch (err) {
+      console.error("[admin/products] delete failed:", err);
+      alert("Failed to delete product.");
     }
   };
 
@@ -77,15 +75,19 @@ export default function AdminProductsPage() {
               <tr key={p.id}>
                 <td style={s.td}>
                   <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                    <img src={p.img} alt={p.name} style={s.thumb} />
+                    {p.images[0] && (
+                      <img src={productImageUrl(p.images[0])} alt={p.name} style={s.thumb} />
+                    )}
                     <span style={{ fontWeight: 600, color: "#3a2a5c" }}>{p.name}</span>
                   </div>
                 </td>
                 <td style={s.td}>{p.category}</td>
-                <td style={s.td}>{p.price}</td>
+                <td style={s.td}>{formatMoney(p.priceCents)}</td>
                 <td style={s.td}>{p.stock}</td>
                 <td style={s.td}>
-                  <span style={{ ...s.statusPill, ...statusStyle[p.status] }}>{p.status}</span>
+                  <span style={{ ...s.statusPill, ...statusStyle[p.status] }}>
+                    {formatProductStatus(p.status)}
+                  </span>
                 </td>
                 <td style={{ ...s.td, textAlign: "right" }}>
                   <button style={s.linkBtn} onClick={() => router.push(`/admin/products/${p.id}`)}>Edit</button>
@@ -93,7 +95,7 @@ export default function AdminProductsPage() {
                 </td>
               </tr>
             ))}
-            {filtered.length === 0 && (
+            {!loading && filtered.length === 0 && (
               <tr>
                 <td colSpan={6} style={{ ...s.td, textAlign: "center", padding: "32px 0", color: "#a89ab0" }}>
                   No products match your search.

@@ -1,10 +1,19 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { api } from "@/lib/api";
+import type { ProductStatus } from "@/types/product";
+
+const STATUS_OPTIONS: { label: string; value: ProductStatus }[] = [
+  { label: "Active", value: "ACTIVE" },
+  { label: "Draft", value: "DRAFT" },
+  { label: "Out of Stock", value: "OUT_OF_STOCK" },
+];
 
 export default function AddProductPage() {
   const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [form, setForm] = useState({
     name: "",
     category: "Blouses",
@@ -13,9 +22,12 @@ export default function AddProductPage() {
     sizes: [] as string[],
     colors: "",
     description: "",
-    status: "Active",
+    status: "ACTIVE" as ProductStatus,
   });
+  const [files, setFiles] = useState<File[]>([]);
+  const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const set = (field: keyof typeof form, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -28,20 +40,47 @@ export default function AddProductPage() {
     }));
   };
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: connect to backend product creation endpoint
-    setSaved(true);
-    setTimeout(() => {
-      setSaved(false);
-      router.push("/admin/products");
-    }, 1200);
+    setError(null);
+    setSaving(true);
+    try {
+      const product = await api.post("/products", {
+        name: form.name,
+        category: form.category,
+        priceCents: Math.round(parseFloat(form.price || "0") * 100),
+        stock: parseInt(form.stock || "0", 10),
+        sizes: form.sizes,
+        colors: form.colors.split(",").map((c) => c.trim()).filter(Boolean),
+        description: form.description,
+        status: form.status,
+      });
+
+      if (files.length > 0) {
+        const formData = new FormData();
+        files.forEach((f) => formData.append("files", f));
+        await api.post(`/products/${product.id}/images`, formData);
+      }
+
+      setSaved(true);
+      setTimeout(() => {
+        setSaved(false);
+        router.push("/admin/products");
+      }, 1000);
+    } catch (err) {
+      console.error("[admin/products/new] save failed:", err);
+      setError("Failed to save product. Please check the details and try again.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
     <div>
       <h1 style={s.title}>Add New Product</h1>
       <p style={s.subtitle}>Fill in the details below to list a new product in your store.</p>
+
+      {error && <div style={s.errorBox}>{error}</div>}
 
       <form onSubmit={handleSave} style={s.grid}>
         {/* Left: main details */}
@@ -64,15 +103,15 @@ export default function AddProductPage() {
             <div style={{ flex: 1 }}>
               <label style={s.label}>Status</label>
               <select style={s.input} value={form.status} onChange={(e) => set("status", e.target.value)}>
-                <option>Active</option>
-                <option>Draft</option>
-                <option>Out of Stock</option>
+                {STATUS_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
               </select>
             </div>
           </div>
 
           <div style={s.row2}>
-            <Field label="Price (£)" value={form.price} onChange={(v) => set("price", v)} placeholder="89.00" wrapperStyle={{ flex: 1 }} />
+            <Field label="Price ($)" value={form.price} onChange={(v) => set("price", v)} placeholder="89.00" wrapperStyle={{ flex: 1 }} />
             <Field label="Stock Quantity" value={form.stock} onChange={(v) => set("stock", v)} placeholder="24" wrapperStyle={{ flex: 1 }} />
           </div>
 
@@ -95,7 +134,7 @@ export default function AddProductPage() {
             </div>
           </div>
 
-          <Field label="Available Colors (comma separated)" value={form.colors} onChange={(v) => set("colors", v)} placeholder="Lavender, Rose, Cream" />
+          <Field label="Available Colors (hex codes, comma separated)" value={form.colors} onChange={(v) => set("colors", v)} placeholder="#c8a0d0, #3a1260, #f5f0e8" />
 
           <div>
             <label style={s.label}>Description</label>
@@ -113,16 +152,28 @@ export default function AddProductPage() {
         <div>
           <div style={{ ...s.card, marginBottom: 20 }}>
             <h2 style={s.cardTitle}>Product Images</h2>
-            <div style={s.uploadBox}>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              style={{ display: "none" }}
+              onChange={(e) => setFiles(Array.from(e.target.files ?? []))}
+            />
+            <div style={s.uploadBox} onClick={() => fileInputRef.current?.click()}>
               <p style={{ fontSize: 24, marginBottom: 8 }}>📷</p>
-              <p style={{ fontSize: 12.5, color: "#8a7a94" }}>Drag & drop images here, or click to browse</p>
-              <p style={{ fontSize: 11, color: "#c0a8bd", marginTop: 4 }}>(Image upload requires backend/storage integration)</p>
+              <p style={{ fontSize: 12.5, color: "#8a7a94" }}>
+                {files.length > 0 ? `${files.length} image${files.length > 1 ? "s" : ""} selected` : "Click to browse images"}
+              </p>
+              {files.length > 0 && (
+                <p style={{ fontSize: 11, color: "#c0a8bd", marginTop: 4 }}>{files.map((f) => f.name).join(", ")}</p>
+              )}
             </div>
           </div>
 
           <div style={s.card}>
-            <button type="submit" style={s.saveBtn}>
-              {saved ? "Product Saved ✓" : "Save Product"}
+            <button type="submit" style={s.saveBtn} disabled={saving}>
+              {saved ? "Product Saved ✓" : saving ? "Saving…" : "Save Product"}
             </button>
             <button type="button" style={s.cancelBtn} onClick={() => router.push("/admin/products")}>
               Cancel
@@ -146,6 +197,7 @@ function Field({ label, value, onChange, placeholder, wrapperStyle }: { label: s
 const s: { [key: string]: React.CSSProperties } = {
   title: { fontSize: 26, fontFamily: "Georgia, serif", color: "#3a2a5c", margin: "0 0 4px" },
   subtitle: { fontSize: 13.5, color: "#8a7a94", marginBottom: 24 },
+  errorBox: { marginBottom: 16, padding: "10px 16px", borderRadius: 8, background: "#fde8ec", color: "#c0395a", fontSize: 13.5, fontWeight: 500 },
 
   grid: { display: "grid", gridTemplateColumns: "1fr 300px", gap: 20, alignItems: "start" },
   card: { background: "#fff", borderRadius: 14, padding: 24, boxShadow: "0 2px 10px rgba(120,90,190,0.08)" },

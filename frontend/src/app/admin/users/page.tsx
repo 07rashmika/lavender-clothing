@@ -1,41 +1,68 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import { api } from "@/lib/api";
+import { formatMoney } from "@/lib/format";
 
-interface UserRow {
-  id: number;
-  name: string;
+interface AdminUser {
+  id: string;
   email: string;
-  joined: string;
-  orders: number;
-  spent: string;
-  tier: "Standard" | "Gold Member" | "VIP";
+  fullName: string | null;
+  suspended: boolean;
+  createdAt: string;
+  orderCount: number;
+  totalSpentCents: number;
 }
 
-const initialUsers: UserRow[] = [
-  { id: 1, name: "Sophie Chen", email: "sophie.c@fashion-studio.com", joined: "Jan 2024", orders: 12, spent: "£1,840.00", tier: "Gold Member" },
-  { id: 2, name: "Amara Silva", email: "amara.silva@gmail.com", joined: "Mar 2024", orders: 4, spent: "£312.00", tier: "Standard" },
-  { id: 3, name: "Priya Fernando", email: "priya.f@outlook.com", joined: "Nov 2023", orders: 21, spent: "£3,210.00", tier: "VIP" },
-  { id: 4, name: "Chloe Bandara", email: "chloe.b@gmail.com", joined: "Jun 2024", orders: 2, spent: "£120.00", tier: "Standard" },
-  { id: 5, name: "Nisha Perera", email: "nisha.perera@yahoo.com", joined: "Feb 2024", orders: 8, spent: "£980.00", tier: "Gold Member" },
-];
+type Tier = "Standard" | "Gold Member" | "VIP";
 
-const tierStyle: Record<UserRow["tier"], React.CSSProperties> = {
+function tierFor(totalSpentCents: number): Tier {
+  if (totalSpentCents >= 200000) return "VIP";
+  if (totalSpentCents >= 50000) return "Gold Member";
+  return "Standard";
+}
+
+const tierStyle: Record<Tier, React.CSSProperties> = {
   Standard: { background: "#ece2f7", color: "#8a7a94" },
   "Gold Member": { background: "#f3e3d0", color: "#a3760f" },
   VIP: { background: "#e6d9f5", color: "#8a6bd6" },
 };
 
 export default function AdminUsersPage() {
+  const [users, setUsers] = useState<AdminUser[]>([]);
   const [search, setSearch] = useState("");
-  const users = initialUsers.filter(
-    (u) => u.name.toLowerCase().includes(search.toLowerCase()) || u.email.toLowerCase().includes(search.toLowerCase())
+
+  useEffect(() => {
+    api
+      .get("/users")
+      .then((data) => setUsers(data ?? []))
+      .catch((err) => console.error("[admin/users] fetch failed:", err));
+  }, []);
+
+  const filtered = users.filter(
+    (u) =>
+      (u.fullName ?? "").toLowerCase().includes(search.toLowerCase()) ||
+      u.email.toLowerCase().includes(search.toLowerCase())
   );
+
+  const toggleSuspend = async (u: AdminUser) => {
+    const next = !u.suspended;
+    if (!confirm(next ? `Suspend ${u.email}?` : `Reactivate ${u.email}?`)) return;
+    const prev = users;
+    setUsers((cur) => cur.map((x) => (x.id === u.id ? { ...x, suspended: next } : x)));
+    try {
+      await api.patch(`/users/${u.id}/suspend`, { suspended: next });
+    } catch (err) {
+      console.error("[admin/users] suspend failed:", err);
+      setUsers(prev);
+      alert("Failed to update user.");
+    }
+  };
 
   return (
     <div>
       <h1 style={s.title}>Users</h1>
-      <p style={s.subtitle}>{initialUsers.length} registered customers.</p>
+      <p style={s.subtitle}>{users.length} registered customers.</p>
 
       <div style={s.card}>
         <input
@@ -57,30 +84,39 @@ export default function AdminUsersPage() {
             </tr>
           </thead>
           <tbody>
-            {users.map((u) => (
-              <tr key={u.id}>
-                <td style={s.td}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <div style={s.avatar}>{u.name.split(" ").map((n) => n[0]).join("")}</div>
-                    <div>
-                      <p style={{ margin: 0, fontWeight: 600, color: "#3a2a5c" }}>{u.name}</p>
-                      <p style={{ margin: 0, fontSize: 11.5, color: "#a89ab0" }}>{u.email}</p>
+            {filtered.map((u) => {
+              const tier = tierFor(u.totalSpentCents);
+              const displayName = u.fullName || u.email;
+              return (
+                <tr key={u.id}>
+                  <td style={s.td}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <div style={s.avatar}>{displayName.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}</div>
+                      <div>
+                        <p style={{ margin: 0, fontWeight: 600, color: "#3a2a5c" }}>{displayName}</p>
+                        <p style={{ margin: 0, fontSize: 11.5, color: "#a89ab0" }}>{u.email}</p>
+                      </div>
                     </div>
-                  </div>
-                </td>
-                <td style={s.td}>{u.joined}</td>
-                <td style={s.td}>{u.orders}</td>
-                <td style={s.td}>{u.spent}</td>
-                <td style={s.td}>
-                  <span style={{ ...s.tierPill, ...tierStyle[u.tier] }}>{u.tier}</span>
-                </td>
-                <td style={{ ...s.td, textAlign: "right" }}>
-                  <button style={s.linkBtn}>View</button>
-                  <button style={{ ...s.linkBtn, color: "#7c5cbf" }}>Suspend</button>
-                </td>
-              </tr>
-            ))}
-            {users.length === 0 && (
+                  </td>
+                  <td style={s.td}>{new Date(u.createdAt).toLocaleDateString("en-US", { month: "short", year: "numeric" })}</td>
+                  <td style={s.td}>{u.orderCount}</td>
+                  <td style={s.td}>{formatMoney(u.totalSpentCents)}</td>
+                  <td style={s.td}>
+                    <span style={{ ...s.tierPill, ...tierStyle[tier] }}>{tier}</span>
+                    {u.suspended && <span style={s.suspendedPill}>Suspended</span>}
+                  </td>
+                  <td style={{ ...s.td, textAlign: "right" }}>
+                    <button
+                      style={{ ...s.linkBtn, color: u.suspended ? "#3a9d5f" : "#7c5cbf" }}
+                      onClick={() => toggleSuspend(u)}
+                    >
+                      {u.suspended ? "Reactivate" : "Suspend"}
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
+            {filtered.length === 0 && (
               <tr>
                 <td colSpan={6} style={{ ...s.td, textAlign: "center", padding: "32px 0", color: "#a89ab0" }}>
                   No users match your search.
@@ -114,8 +150,9 @@ const s: { [key: string]: React.CSSProperties } = {
     fontFamily: "Georgia, serif", flexShrink: 0,
   },
   tierPill: { fontSize: 10.5, fontWeight: 700, padding: "4px 10px", borderRadius: 20 },
+  suspendedPill: { fontSize: 10.5, fontWeight: 700, padding: "4px 10px", borderRadius: 20, marginLeft: 6, background: "#fde8ec", color: "#c0395a" },
   linkBtn: {
-    background: "none", border: "none", color: "#8a6bd6", fontSize: 12.5, fontWeight: 600,
+    background: "none", border: "none", fontSize: 12.5, fontWeight: 600,
     cursor: "pointer", marginLeft: 14,
   },
 };
