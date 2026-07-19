@@ -15,4 +15,8 @@ export class TrendsController {
   getTrends() {
     return this.trendsService.getTrends();
   }
+  @Get('popular')
+getPopular() {
+  return this.trendsService.getPublicTrending();
+}
 }

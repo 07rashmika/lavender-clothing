@@ -82,4 +82,30 @@ export class TrendsService {
 
     return { topProducts, topColors, topCustomizationColors, salesByDay };
   }
+
+  async getPublicTrending() {
+  const topProductsRaw = await this.prisma.orderItem.groupBy({
+    by: ['productId'],
+    _sum: { quantity: true },
+    where: { productId: { not: null } },
+    orderBy: { _sum: { quantity: 'desc' } },
+    take: 8,
+  });
+
+  const productIds = topProductsRaw
+    .map((p) => p.productId)
+    .filter((id): id is string => id !== null);
+
+  if (productIds.length === 0) return [];
+
+  const products = await this.prisma.product.findMany({
+    where: { id: { in: productIds }, status: 'ACTIVE' },
+  });
+
+  // findMany doesn't preserve input order, so re-sort to match popularity ranking
+  const productMap = new Map(products.map((p) => [p.id, p]));
+  return productIds
+    .map((id) => productMap.get(id))
+    .filter((p): p is NonNullable<typeof p> => p !== undefined);
+}
 }

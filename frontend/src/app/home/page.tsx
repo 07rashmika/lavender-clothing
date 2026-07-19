@@ -57,6 +57,7 @@ export default function HomePage() {
   const { toggleWishlist, isInWishlist } = useWishlist();
   const [slide, setSlide] = useState(0);
   const [products, setProducts] = useState<Product[]>([]);
+  const [trendingProducts, setTrendingProducts] = useState<Product[]>([]);
 
   const nextSlide = useCallback(() => {
     setSlide((prev) => (prev + 1) % heroSlides.length);
@@ -76,6 +77,13 @@ export default function HomePage() {
       .get("/products?status=ACTIVE")
       .then((data) => setProducts(data ?? []))
       .catch((err) => console.error("[home] products fetch failed:", err));
+  }, []);
+
+  useEffect(() => {
+    api
+      .get("/trends/popular")
+      .then((data) => setTrendingProducts(data ?? []))
+      .catch((err) => console.error("[home] trending fetch failed:", err));
   }, []);
 
   const newArrivals = products.slice(0, 6);
@@ -142,6 +150,70 @@ export default function HomePage() {
           ))}
         </div>
       </section>
+
+      {/* TRENDING NOW */}
+      {trendingProducts.length > 0 && (
+        <section style={s.section}>
+          <div style={s.sectionHeader}>
+            <h2 style={{...s.sectionTitle, margin: 0}}>Trending Now</h2>
+            <a style={s.viewAll} onClick={() => router.push("/shop")} href="#">View All Products →</a>
+          </div>
+          <div style={s.productsGrid}>
+            {trendingProducts.map(p => (
+              <div key={p.id} style={s.productCard} className="lav-card" onClick={() => router.push(`/shop/${p.id}`)}>
+                <div style={s.productImgWrap}>
+                  {p.images[0] && (
+                    <Image src={productImageUrl(p.images[0])} alt={p.name} fill sizes="33vw" style={s.productImg} />
+                  )}
+                  <span style={{...s.productTag, background: "#ff6b35"}}>🔥 Trending</span>
+                  <div style={s.productActions} className="product-actions">
+                    <button
+                      style={s.actionBtn}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleWishlist({
+                          id: p.id,
+                          name: p.name,
+                          price: p.priceCents / 100,
+                          image: p.images[0] ? productImageUrl(p.images[0]) : "",
+                          badge: p.tag || undefined,
+                          colorSwatch: p.colors[0],
+                        });
+                      }}
+                      className="lav-action"
+                    >
+                      {isInWishlist(p.id) ? "♥" : "♡"}
+                    </button>
+                    <button
+                      style={s.actionBtn}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        addToCart({
+                          id: p.id,
+                          name: p.name,
+                          price: p.priceCents / 100,
+                          image: p.images[0] ? productImageUrl(p.images[0]) : "",
+                          color: "Default",
+                          colorSwatch: p.colors[0],
+                          size: p.sizes[0] ?? "M",
+                          badge: p.tag || undefined,
+                        });
+                      }}
+                      className="lav-action"
+                    >
+                      🛒
+                    </button>
+                  </div>
+                </div>
+                <div style={s.productInfo}>
+                  <p style={s.productName}>{p.name}</p>
+                  <p style={s.productPrice}>${(p.priceCents / 100).toFixed(2)}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* CURATED COLLECTIONS */}
       <section style={s.section}>
