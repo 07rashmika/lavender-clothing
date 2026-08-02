@@ -21,6 +21,12 @@ const inspirations = [
   { name: "Watercolour Haze", bg: "#c8d8f0", accent: "#7b2fa8" },
 ];
 
+interface DesignSuggestion {
+  colors: string[];
+  fonts: string[];
+  source: "openai" | "mock";
+}
+
 export default function CustomizerPage() {
   const router = useRouter();
   const { user } = useAuth();
@@ -36,7 +42,35 @@ export default function CustomizerPage() {
   const [submitted, setSubmitted] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
+  // AI Stylist state
+  const [styleDescription, setStyleDescription] = useState("");
+  const [aiSuggestion, setAiSuggestion] = useState<DesignSuggestion | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+
   const estimatedPrice = 45 + (selectedMaterial === "Silk Touch" ? 20 : selectedMaterial === "Bamboo Blend" ? 10 : 0);
+
+  const handleGetAiSuggestions = async () => {
+    if (!user) {
+      router.push("/auth");
+      return;
+    }
+    if (styleDescription.trim().length < 3) {
+      setAiError("Describe your vibe in a few more words (e.g. \"elegant evening look\").");
+      return;
+    }
+    setAiError(null);
+    setAiLoading(true);
+    try {
+      const result = await api.post("/recommendations/design", { description: styleDescription });
+      setAiSuggestion(result);
+    } catch (err) {
+      console.error("[customizer] AI suggestion failed:", err);
+      setAiError("Couldn't get suggestions right now. Please try again.");
+    } finally {
+      setAiLoading(false);
+    }
+  };
 
   const handleSubmitRequest = async () => {
     if (!user) {
@@ -116,14 +150,56 @@ export default function CustomizerPage() {
           {/* AI Stylist */}
           <div style={s.aiBox}>
             <p style={s.aiTitle}>✦ AI STYLIST SUGGESTIONS</p>
-            <div style={s.aiSuggestions}>
-              <div style={s.aiSuggestion}>
-                ✓ <span style={s.aiText}>Pairs perfectly with our <span style={s.aiLink}>High-Rise Jeans</span> for an effortless weekend look.</span>
-              </div>
-              <div style={s.aiSuggestion}>
-                ✓ <span style={s.aiText}>Try a <span style={s.aiLink}>Floral Embroidery</span> accent to elevate this everyday feel.</span>
-              </div>
+
+            <div style={s.aiInputWrap}>
+              <input
+                value={styleDescription}
+                onChange={(e) => setStyleDescription(e.target.value)}
+                placeholder="Describe your vibe (e.g. elegant evening look)"
+                style={s.aiInput}
+                className="custom-input"
+                maxLength={80}
+                onKeyDown={(e) => { if (e.key === "Enter") handleGetAiSuggestions(); }}
+              />
+              <button
+                style={s.aiButton}
+                className="ai-suggest-btn"
+                onClick={handleGetAiSuggestions}
+                disabled={aiLoading}
+              >
+                {aiLoading ? "Thinking…" : "Get Suggestions"}
+              </button>
             </div>
+
+            {aiError && <p style={s.aiErrorText}>{aiError}</p>}
+
+            {aiSuggestion && (
+              <div style={s.aiSuggestions}>
+                <div style={s.aiChipGroup}>
+                  <span style={s.aiChipLabel}>Colors</span>
+                  <div style={s.aiChipRow}>
+                    {aiSuggestion.colors.map((c) => (
+                      <span key={c} style={s.aiChip}>{c}</span>
+                    ))}
+                  </div>
+                </div>
+                <div style={s.aiChipGroup}>
+                  <span style={s.aiChipLabel}>Fonts</span>
+                  <div style={s.aiChipRow}>
+                    {aiSuggestion.fonts.map((f) => (
+                      <span key={f} style={s.aiChip}>{f}</span>
+                    ))}
+                  </div>
+                </div>
+                {aiSuggestion.source === "mock" && (
+                  <p style={s.aiMockNote}>Preview suggestions — full AI stylist coming soon.</p>
+                )}
+              </div>
+            )}
+
+            {!aiSuggestion && !aiError && (
+              <p style={s.aiHint}>Tell us the look you're going for and we'll suggest colors and fonts to match.</p>
+            )}
           </div>
         </div>
 
@@ -304,7 +380,17 @@ const s: { [key: string]: React.CSSProperties } = {
   controlBtn: { width: 32, height: 32, borderRadius: "50%", border: "1.5px solid #e8dce8", background: "#fff", fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" },
   aiBox: { background: "#fff", borderRadius: 12, padding: "14px 16px", border: "1px solid #f0e8f5" },
   aiTitle: { fontSize: 10, fontWeight: 700, color: "#9b6fd0", letterSpacing: 1, marginBottom: 10 },
-  aiSuggestions: { display: "flex", flexDirection: "column", gap: 8 },
+  aiInputWrap: { display: "flex", flexDirection: "column", gap: 8, marginBottom: 10 },
+  aiInput: { width: "100%", padding: "8px 12px", borderRadius: 8, border: "1.5px solid #e8dce8", fontSize: 12, outline: "none", fontFamily: "'Inter',sans-serif", boxSizing: "border-box" },
+  aiButton: { padding: "8px 0", borderRadius: 8, background: "#7b2fa8", color: "#fff", border: "none", fontSize: 12, fontWeight: 700, cursor: "pointer" },
+  aiErrorText: { fontSize: 11, color: "#c0395a", marginBottom: 8 },
+  aiHint: { fontSize: 11, color: "#aaa", lineHeight: 1.5 },
+  aiSuggestions: { display: "flex", flexDirection: "column", gap: 10 },
+  aiChipGroup: { display: "flex", flexDirection: "column", gap: 6 },
+  aiChipLabel: { fontSize: 10, fontWeight: 700, color: "#999", letterSpacing: 0.5, textTransform: "uppercase" },
+  aiChipRow: { display: "flex", flexWrap: "wrap", gap: 6 },
+  aiChip: { fontSize: 11, color: "#7b2fa8", background: "#f8f0ff", border: "1px solid #e8d8f5", borderRadius: 20, padding: "3px 10px" },
+  aiMockNote: { fontSize: 10, color: "#bbb", fontStyle: "italic", margin: 0 },
   aiSuggestion: { fontSize: 11, color: "#555", lineHeight: 1.5, display: "flex", gap: 6 },
   aiText: { fontSize: 11, color: "#555" },
   aiLink: { color: "#c0395a", textDecoration: "underline", cursor: "pointer" },
@@ -376,6 +462,7 @@ const css = `
   .custom-input:focus { border-color: #9b6fd0 !important; outline: none; }
   .upload-box:hover { background: #f8f0ff !important; border-color: #9b6fd0 !important; }
   .add-bag-btn:hover { background: #a02848 !important; transform: translateY(-2px); box-shadow: 0 8px 20px rgba(192,57,90,0.3); }
+  .ai-suggest-btn:hover { background: #6a2494 !important; }
   .inspo-card:hover { transform: translateY(-3px); box-shadow: 0 6px 16px rgba(0,0,0,0.1); }
   .refresh-btn:hover { color: #c0395a !important; }
 `;

@@ -14,6 +14,7 @@ import { CartModule } from './cart/cart.module';
 import { WishlistModule } from './wishlist/wishlist.module';
 import { PaymentsModule } from './payments/payments.module';
 import { TrendsModule } from './trends/trends.module';
+import { RecommendationsModule } from './recommendations/recommendations.module';
 
 @Module({
   imports: [
@@ -30,7 +31,9 @@ import { TrendsModule } from './trends/trends.module';
     WishlistModule,
     PaymentsModule,
     TrendsModule,
+    RecommendationsModule,
   ],
+  
   controllers: [AppController],
   providers: [AppService],
 })
