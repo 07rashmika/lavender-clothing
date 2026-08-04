@@ -77,7 +77,7 @@ export default function AdminOrdersPage() {
               <th style={s.th}>Date</th>
               <th style={s.th}>Items</th>
               <th style={s.th}>Payment</th>
-              <th style={{ ...s.th, textAlign: "right" }}>Total</th>
+              <th style={{ ...s.th, textAlign: "right", paddingRight: 40 }}>Total</th>
               <th style={s.th}>Status</th>
             </tr>
           </thead>
@@ -89,7 +89,7 @@ export default function AdminOrdersPage() {
                 <td style={s.td}>{new Date(o.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</td>
                 <td style={s.td}>{o.items.reduce((sum, i) => sum + i.quantity, 0)}</td>
                 <td style={s.td}>{paymentLabel[o.payment]}</td>
-                <td style={{ ...s.tdBold, textAlign: "right" }}>{formatMoney(o.totalCents)}</td>
+                <td style={{ ...s.tdBold, textAlign: "right", whiteSpace: "nowrap", paddingRight: 40 }}>{formatMoney(o.totalCents)}</td>
                 <td style={s.td}>
                   <select
                     value={o.status}
@@ -123,16 +123,16 @@ const s: { [key: string]: React.CSSProperties } = {
 
   filterRow: { display: "flex", gap: 8, marginBottom: 18 },
   filterBtn: {
-    padding: "7px 16px", borderRadius: 20, border: "1.5px solid #ded0f0", background: "#fff",
+    padding: "7px 16px", borderRadius: 20, borderWidth: 1.5, borderStyle: "solid", borderColor: "#ded0f0", background: "#fff",
     fontSize: 12.5, color: "#6a5a74", cursor: "pointer",
   },
   filterBtnActive: { background: "#3a2a5c", borderColor: "#3a2a5c", color: "#fff", fontWeight: 600 },
 
   card: { background: "#fff", borderRadius: 14, padding: 24, boxShadow: "0 2px 10px rgba(120,90,190,0.08)" },
   table: { width: "100%", borderCollapse: "collapse" },
-  th: { textAlign: "left", fontSize: 10.5, color: "#a89ab0", letterSpacing: 0.5, fontWeight: 600, paddingBottom: 10, borderBottom: "1px solid #ece2f7" },
-  td: { fontSize: 13, color: "#4a3a5a", padding: "13px 0", borderBottom: "1px solid #f4eefb" },
-  tdBold: { fontSize: 13, color: "#3a2a5c", fontWeight: 700, padding: "13px 0", borderBottom: "1px solid #f4eefb" },
+  th: { textAlign: "left", fontSize: 10.5, color: "#a89ab0", letterSpacing: 0.5, fontWeight: 600, padding: "0 16px 10px 0", borderBottom: "1px solid #ece2f7" },
+  td: { fontSize: 13, color: "#4a3a5a", padding: "13px 16px 13px 0", borderBottom: "1px solid #f4eefb" },
+  tdBold: { fontSize: 13, color: "#3a2a5c", fontWeight: 700, padding: "13px 16px 13px 0", borderBottom: "1px solid #f4eefb" },
 
   statusSelect: {
     fontSize: 11.5, fontWeight: 700, padding: "5px 10px", borderRadius: 20, border: "none",
