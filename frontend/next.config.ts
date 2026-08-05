@@ -7,6 +7,12 @@ const apiUrl = process.env.NEXT_PUBLIC_API_URL
 const nextConfig: NextConfig = {
   /* config options here */
   reactCompiler: true,
+  // Keep Turbopack inside this application.  The workspace sits below a
+  // OneDrive path and an unrelated lockfile above it otherwise makes Next
+  // attempt to scan the whole user profile during a production build.
+  turbopack: {
+    root: process.cwd(),
+  },
   images: {
     remotePatterns: apiUrl
       ? [

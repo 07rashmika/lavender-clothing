@@ -13,6 +13,8 @@ import { DashboardModule } from './dashboard/dashboard.module';
 import { CartModule } from './cart/cart.module';
 import { WishlistModule } from './wishlist/wishlist.module';
 import { PaymentsModule } from './payments/payments.module';
+import { CloudinaryModule } from './cloudinary/cloudinary.module';
+import { UploadsModule } from 'uploads/uploads.module';
 
 @Module({
   imports: [
@@ -28,6 +30,8 @@ import { PaymentsModule } from './payments/payments.module';
     CartModule,
     WishlistModule,
     PaymentsModule,
+    CloudinaryModule,
+    UploadsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

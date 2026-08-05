@@ -16,6 +16,7 @@ import { CartService } from './cart.service';
 import { AddCartItemDto } from './dto/add-cart-item.dto';
 import { UpdateCartItemDto } from './dto/update-cart-item.dto';
 import { RemoveCartItemDto } from './dto/remove-cart-item.dto';
+import { AddCustomizationCartItemDto } from './dto/add-customization-cart-item.dto';
 
 @Controller('cart')
 @UseGuards(AuthGuard)
@@ -30,6 +31,40 @@ export class CartController {
   @Post()
   add(@CurrentUser() user: SupabaseUser, @Body() dto: AddCartItemDto) {
     return this.cartService.add(user.sub, dto);
+  }
+
+  @Post('customizations/:customizationId')
+  addCustomization(
+    @CurrentUser() user: SupabaseUser,
+    @Param('customizationId') customizationId: string,
+    @Body() dto: AddCustomizationCartItemDto,
+  ) {
+    return this.cartService.addCustomization(
+      user.sub,
+      customizationId,
+      dto.quantity ?? 1,
+    );
+  }
+
+  @Patch('customizations/:customizationId')
+  updateCustomization(
+    @CurrentUser() user: SupabaseUser,
+    @Param('customizationId') customizationId: string,
+    @Body() dto: AddCustomizationCartItemDto,
+  ) {
+    return this.cartService.updateCustomization(
+      user.sub,
+      customizationId,
+      dto.quantity ?? 1,
+    );
+  }
+
+  @Delete('customizations/:customizationId')
+  removeCustomization(
+    @CurrentUser() user: SupabaseUser,
+    @Param('customizationId') customizationId: string,
+  ) {
+    return this.cartService.removeCustomization(user.sub, customizationId);
   }
 
   @Patch(':productId')

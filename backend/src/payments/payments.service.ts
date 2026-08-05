@@ -30,7 +30,7 @@ export class PaymentsService {
   async computeCartTotalCents(userId: string) {
     const cartItems = await this.prisma.cartItem.findMany({
       where: { userId },
-      include: { product: true },
+      include: { product: true, customization: true },
     });
 
     if (cartItems.length === 0) {
@@ -38,7 +38,12 @@ export class PaymentsService {
     }
 
     const subtotalCents = cartItems.reduce(
-      (sum, item) => sum + item.product.priceCents * item.quantity,
+      (sum, item) =>
+        sum +
+        (item.product?.priceCents ??
+          item.customization?.estimatedPriceCents ??
+          4500) *
+          item.quantity,
       0,
     );
 
@@ -69,7 +74,10 @@ export class PaymentsService {
     };
   }
 
-  async verifyPaymentIntent(paymentIntentId: string, expectedAmountCents: number) {
+  async verifyPaymentIntent(
+    paymentIntentId: string,
+    expectedAmountCents: number,
+  ) {
     let intent: Stripe.PaymentIntent;
     try {
       intent = await this.getStripe().paymentIntents.retrieve(paymentIntentId);
@@ -80,7 +88,9 @@ export class PaymentsService {
       throw new BadRequestException('Payment has not been completed');
     }
     if (intent.amount !== expectedAmountCents) {
-      throw new BadRequestException('Payment amount does not match order total');
+      throw new BadRequestException(
+        'Payment amount does not match order total',
+      );
     }
     return intent;
   }
