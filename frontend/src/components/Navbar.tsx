@@ -113,6 +113,7 @@ export default function Navbar({ activePage = "home" }: NavbarProps) {
                 <p style={s.userMenuEmail}>{user.email}</p>
                 <hr style={{ border: "none", borderTop: "1px solid #f0eaf8", margin: "6px 0" }} />
                 <button style={s.userMenuItem} onClick={() => { setUserMenuOpen(false); router.push("/profile"); }}>My Profile</button>
+                <button style={s.userMenuItem} onClick={() => { setUserMenuOpen(false); router.push("/account/my-designs"); }}>My Designs</button>
                 <button style={{ ...s.userMenuItem, color: "#c0395a" }} onClick={handleSignOut}>Sign Out</button>
               </div>
             )}

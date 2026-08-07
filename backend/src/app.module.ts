@@ -13,6 +13,7 @@ import { DashboardModule } from './dashboard/dashboard.module';
 import { CartModule } from './cart/cart.module';
 import { WishlistModule } from './wishlist/wishlist.module';
 import { PaymentsModule } from './payments/payments.module';
+import { CloudinaryModule } from './cloudinary/cloudinary.module';
 import { TrendsModule } from './trends/trends.module';
 import { RecommendationsModule } from './recommendations/recommendations.module';
 
@@ -30,10 +31,10 @@ import { RecommendationsModule } from './recommendations/recommendations.module'
     CartModule,
     WishlistModule,
     PaymentsModule,
+    CloudinaryModule,
     TrendsModule,
     RecommendationsModule,
   ],
-  
   controllers: [AppController],
   providers: [AppService],
 })
