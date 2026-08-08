@@ -93,6 +93,9 @@ export default function Studio() {
     placements: [],
   });
   const [aiLoading, setAiLoading] = useState(false);
+  const [stylePrompt, setStylePrompt] = useState("");
+  const [aiRecs, setAiRecs] = useState<{ colors: string[]; fonts: string[]; source: string } | null>(null);
+  const [aiRecsLoading, setAiRecsLoading] = useState(false);
   const [renderer, setRenderer] = useState<THREE.WebGLRenderer | null>(null);
   const [history, setHistory] = useState<Draft[]>([]);
   const [future, setFuture] = useState<Draft[]>([]);
@@ -300,10 +303,10 @@ export default function Studio() {
       layers:
         target && activeLayerId
           ? draft.layers.map((layer) =>
-              layer.id === activeLayerId
-                ? { ...layer, target, position: [0, 0.35] }
-                : layer,
-            )
+            layer.id === activeLayerId
+              ? { ...layer, target, position: [0, 0.35] }
+              : layer,
+          )
           : draft.layers,
     }));
   };
@@ -315,6 +318,18 @@ export default function Studio() {
       ),
     }));
   const beginLayerMove = () => checkpoint();
+  const handleGetRecs = async () => {
+    if (stylePrompt.trim().length < 3) return;
+    setAiRecsLoading(true);
+    try {
+      const result = await api.post("/recommendations/design", { description: stylePrompt });
+      setAiRecs(result);
+    } catch (err) {
+      console.error("[studio] AI recs failed:", err);
+    } finally {
+      setAiRecsLoading(false);
+    }
+  };
   const download = () => {
     if (!renderer) return;
     const link = document.createElement("a");
@@ -410,7 +425,7 @@ export default function Studio() {
             ⛔
           </button>
           <button style={s.downloadHeader} onClick={download}>
-             ⬇️ Download preview
+            ⬇️ Download preview
           </button>
           <button
             style={{ ...s.apply, opacity: isSaving ? 0.65 : 1 }}
@@ -630,6 +645,79 @@ export default function Studio() {
               Reset
             </button>
           </div>
+          {/* AI Style Recommendations — backend powered */}
+          <section style={s.aiSection}>
+            <div style={s.aiSectionHead}>
+              <b>AI colour & font ideas</b>
+            </div>
+            <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+              <input
+                value={stylePrompt}
+                onChange={(e) => setStylePrompt(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") void handleGetRecs(); }}
+                placeholder="Describe your vibe (e.g. bold streetwear)"
+                style={{ ...s.input, flex: 1 }}
+              />
+              <button
+                onClick={() => void handleGetRecs()}
+                disabled={aiRecsLoading || stylePrompt.trim().length < 3}
+                style={{ ...s.apply, whiteSpace: "nowrap" }}
+              >
+                {aiRecsLoading ? "…" : "Get ideas"}
+              </button>
+            </div>
+            {aiRecs && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                <div>
+                  <p style={{ fontSize: 11, color: "#999", marginBottom: 6, fontWeight: 700, letterSpacing: 0.5 }}>SUGGESTED COLOURS</p>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                    {aiRecs.colors.map((c) => (
+                      <button
+                        key={c}
+                        title={c}
+                        onClick={() => update({
+                          color: c,
+                          panelColors: { ...current.panelColors, [current.panel]: c },
+                        })}
+                        style={{
+                          padding: "4px 10px", borderRadius: 999, fontSize: 11,
+                          border: "1px solid #e2dce8", background: "#f7f1ff",
+                          color: "#5b2d8e", cursor: "pointer", fontWeight: 600,
+                        }}
+                      >
+                        {c}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <p style={{ fontSize: 11, color: "#999", marginBottom: 6, fontWeight: 700, letterSpacing: 0.5 }}>SUGGESTED FONTS</p>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                    {aiRecs.fonts.map((f) => (
+                      <button
+                        key={f}
+                        onClick={() => { if (activeLayer?.type === "text") updateLayer({ font: f }); }}
+                        style={{
+                          padding: "4px 10px", borderRadius: 999, fontSize: 11,
+                          border: "1px solid #e2dce8", background: "#f7f1ff",
+                          color: "#5b2d8e", cursor: "pointer", fontWeight: 600,
+                          opacity: activeLayer?.type === "text" ? 1 : 0.5,
+                        }}
+                        title={activeLayer?.type === "text" ? `Apply ${f}` : "Select a text layer first"}
+                      >
+                        {f}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {aiRecs.source === "mock" && (
+                  <p style={{ fontSize: 10, color: "#bbb", fontStyle: "italic" }}>
+                    Preview suggestions — full AI active once API key is set.
+                  </p>
+                )}
+              </div>
+            )}
+          </section>
           <section style={s.aiSection}>
             <div style={s.aiSectionHead}>
               <div>

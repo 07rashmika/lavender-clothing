@@ -10,6 +10,7 @@ const navItems = [
   { label: "Add Product", href: "/admin/products/new", icon: "➕" },
   { label: "Orders", href: "/admin/orders", icon: "📦" },
   { label: "Customization Monitor", href: "/admin/customization", icon: "🎨" },
+  { label: "Trends", href: "/admin/trends", icon: "📈" },
   { label: "Users", href: "/admin/users", icon: "👥" },
   { label: "Settings", href: "/admin/settings", icon: "⚙️" },
 ];

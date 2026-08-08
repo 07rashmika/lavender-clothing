@@ -14,7 +14,8 @@ import { CartModule } from './cart/cart.module';
 import { WishlistModule } from './wishlist/wishlist.module';
 import { PaymentsModule } from './payments/payments.module';
 import { CloudinaryModule } from './cloudinary/cloudinary.module';
-import { UploadsModule } from 'uploads/uploads.module';
+import { TrendsModule } from './trends/trends.module';
+import { RecommendationsModule } from './recommendations/recommendations.module';
 
 @Module({
   imports: [
@@ -31,7 +32,8 @@ import { UploadsModule } from 'uploads/uploads.module';
     WishlistModule,
     PaymentsModule,
     CloudinaryModule,
-    UploadsModule,
+    TrendsModule,
+    RecommendationsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
