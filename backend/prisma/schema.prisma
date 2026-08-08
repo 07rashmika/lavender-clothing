@@ -1,19 +1,186 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
-  provider = "prisma-client"
-  output   = "../generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
 }
 
+enum Role {
+  CUSTOMER
+  ADMIN
+}
+
+enum ProductStatus {
+  ACTIVE
+  DRAFT
+  OUT_OF_STOCK
+}
+
+enum OrderStatus {
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+enum PaymentMethod {
+  CARD
+  COD
+}
+
+enum CustomizationStatus {
+  PENDING_REVIEW
+  IN_PRODUCTION
+  READY_FOR_DELIVERY
+  DELIVERED
+}
+
 model User {
-  id String @id @default(uuid())
-  email String @unique
+  id        String   @id
+  email     String   @unique
+  fullName  String?
+  avatarUrl String?
+  provider  String   @default("email")
+  role      Role     @default(CUSTOMER)
+  suspended Boolean  @default(false)
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  orders         Order[]
+  customizations Customization[]
+  cartItems      CartItem[]
+  wishlistItems  WishlistItem[]
+
+  @@map("users")
+}
+
+model Product {
+  id                  String        @id @default(cuid())
+  name                String
+  category            String
+  priceCents          Int
+  compareAtPriceCents Int?
+  stock               Int           @default(0)
+  status              ProductStatus @default(DRAFT)
+  tag                 String?
+  sizes               String[]      @default([])
+  colors              String[]      @default([])
+  description         String        @default("")
+  fabric              String        @default("")
+  images              String[]      @default([])
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+
+  orderItems    OrderItem[]
+  cartItems     CartItem[]
+  wishlistItems WishlistItem[]
+
+  @@map("products")
+}
+
+model Order {
+  id                    String        @id @default(cuid())
+  orderNumber           String        @unique
+  userId                String
+  user                  User          @relation(fields: [userId], references: [id])
+  items                 OrderItem[]
+  subtotalCents         Int
+  taxCents              Int
+  feeCents              Int
+  totalCents            Int
+  payment               PaymentMethod
+  stripePaymentIntentId String?       @unique
+  status                OrderStatus   @default(PROCESSING)
+  shippingFirstName     String
+  shippingLastName      String
+  shippingAddress       String
+  shippingCity          String
+  shippingState         String
+  shippingZip           String
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+
+  @@map("orders")
+}
+
+model OrderItem {
+  id         String   @id @default(cuid())
+  orderId    String
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId  String?
+  product    Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  name       String
+  priceCents Int
+  color      String?
+  size       String?
+  quantity   Int
+
+  @@map("order_items")
+}
+
+model Customization {
+  id                  String              @id @default(cuid())
+  requestNumber       String              @unique
+  userId              String
+  user                User                @relation(fields: [userId], references: [id])
+  fabric              String
+  color               String
+  cut                 String
+  size                String?
+  notes               String              @default("")
+  estimatedPriceCents Int?
+  status              CustomizationStatus @default(PENDING_REVIEW)
+  urgent              Boolean             @default(false)
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+
+  @@map("customizations")
+}
+
+model StoreSettings {
+  id                     Int      @id @default(1)
+  storeName              String   @default("Lavender")
+  storeEmail             String   @default("")
+  storePhone             String   @default("")
+  storeAddress           String   @default("")
+  shippingFeeCents       Int      @default(200)
+  codFeeCents            Int      @default(200)
+  taxRateBps             Int      @default(800)
+  freeShipThresholdCents Int      @default(20000)
+  notifyNewOrder         Boolean  @default(true)
+  notifyCustomRequest    Boolean  @default(true)
+  notifyLowStock         Boolean  @default(false)
+  updatedAt              DateTime @updatedAt
+
+  @@map("store_settings")
+}
+
+model CartItem {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  color       String
+  colorSwatch String?
+  size        String
+  quantity    Int      @default(1)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([userId, productId, color, size])
+  @@map("cart_items")
+}
+
+model WishlistItem {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, productId])
+  @@map("wishlist_items")
 }
