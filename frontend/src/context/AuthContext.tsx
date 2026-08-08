@@ -3,7 +3,6 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import type { User, Session } from "@supabase/supabase-js";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase";
-import { api } from "@/lib/api";
 
 type Role = "CUSTOMER" | "ADMIN";
 
@@ -47,12 +46,20 @@ export async function syncUserWithBackend(accessToken: string) {
   }
 }
 
-export async function fetchRole(): Promise<Role | null> {
+export async function fetchRole(accessToken: string): Promise<Role | null> {
   try {
-    const me = await api.get("/users/me");
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/me`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (!res.ok) {
+      const body = await res.text();
+      console.error(`[role] failed ${res.status}:`, body);
+      return null;
+    }
+    const me = await res.json();
     return (me?.role as Role) ?? null;
   } catch (err) {
-    console.error("[role] fetch failed:", err);
+    console.error("[role] network error:", err);
     return null;
   }
 }
@@ -76,7 +83,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(session?.user ?? null);
       if (session?.access_token) {
         await withTimeout(syncUserWithBackend(session.access_token), 8000, undefined);
-        setRole(await withTimeout(fetchRole(), 8000, null));
+        setRole(await withTimeout(fetchRole(session.access_token), 8000, null));
       }
       setLoading(false);
     });
@@ -87,7 +94,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (event === "SIGNED_IN" && session?.access_token) {
         await withTimeout(syncUserWithBackend(session.access_token), 8000, undefined);
-        setRole(await withTimeout(fetchRole(), 8000, null));
+        setRole(await withTimeout(fetchRole(session.access_token), 8000, null));
       }
 
       if (event === "SIGNED_OUT") {

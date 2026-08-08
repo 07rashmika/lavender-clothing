@@ -55,7 +55,7 @@ export default function AuthPage() {
     let role = null;
     if (data.session) {
       await syncUserWithBackend(data.session.access_token);
-      role = await fetchRole();
+      role = await fetchRole(data.session.access_token);
     }
     router.push(role === "ADMIN" ? "/admin" : "/home");
   };
@@ -90,7 +90,7 @@ export default function AuthPage() {
     }
 
     await syncUserWithBackend(data.session.access_token);
-    const role = await fetchRole();
+    const role = await fetchRole(data.session.access_token);
     router.push(role === "ADMIN" ? "/admin" : "/home");
   };
 
@@ -274,7 +274,7 @@ const s: { [key: string]: React.CSSProperties } = {
   label: { fontSize: 13.5, fontWeight: 500, color: "#2d1a3a", marginBottom: 6, marginTop: 10, display: "block" },
   inputWrapper: { position: "relative", display: "flex", alignItems: "center" },
   inputIcon: { position: "absolute", left: 16, fontSize: 15, color: "#b0a0b8", pointerEvents: "none" },
-  input: { width: "100%", padding: "12px 42px 12px 44px", borderRadius: 10, border: "1.5px solid #e8dce8", backgroundColor: "#fdf3f6", fontSize: 14.5, color: "#2d1a3a", outline: "none", boxSizing: "border-box", fontFamily: "'Inter',sans-serif" },
+  input: { width: "100%", padding: "12px 42px 12px 44px", borderRadius: 10, borderWidth: 1.5, borderStyle: "solid", borderColor: "#e8dce8", backgroundColor: "#fdf3f6", fontSize: 14.5, color: "#2d1a3a", outline: "none", boxSizing: "border-box", fontFamily: "'Inter',sans-serif" },
   eyeIcon: { position: "absolute", right: 16, fontSize: 15, cursor: "pointer", color: "#b0a0b8" },
   strengthWrap: { display: "flex", alignItems: "center", gap: 10, marginTop: 8 },
   strengthBar: { display: "flex", gap: 4, flex: 1 },

@@ -17,7 +17,12 @@ const navItems = [
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, isAdmin, loading } = useAuth();
+  const { user, isAdmin, loading, signOut } = useAuth();
+
+  const handleSignOut = async () => {
+    await signOut();
+    router.push("/auth");
+  };
 
   useEffect(() => {
     if (!loading && (!user || !isAdmin)) {
@@ -69,6 +74,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           >
             ← Back to Storefront
           </a>
+          <a
+            href="#"
+            onClick={(e) => { e.preventDefault(); handleSignOut(); }}
+            style={{ ...s.backToSite, ...s.signOutLink }}
+          >
+            Sign Out
+          </a>
         </div>
       </aside>
 
@@ -109,6 +121,7 @@ const s: { [key: string]: React.CSSProperties } = {
   adminName: { fontSize: 13, fontWeight: 600, color: "#fff", margin: 0, maxWidth: 150, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
   adminRole: { fontSize: 11, color: "rgba(255,255,255,0.55)", margin: 0 },
   backToSite: { fontSize: 12, color: "rgba(255,255,255,0.55)", textDecoration: "none" },
+  signOutLink: { display: "block", marginTop: 10, color: "#e08ba0", cursor: "pointer" },
 
   main: { flex: 1, display: "flex", flexDirection: "column", minWidth: 0 },
   topbar: {

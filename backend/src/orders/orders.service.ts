@@ -7,6 +7,7 @@ import { PaymentMethod, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { SettingsService } from '../settings/settings.service';
 import { PaymentsService } from '../payments/payments.service';
+import { MailService } from '../mail/mail.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
 import { QueryOrderDto } from './dto/query-order.dto';
@@ -17,6 +18,7 @@ export class OrdersService {
     private readonly prisma: PrismaService,
     private readonly settingsService: SettingsService,
     private readonly paymentsService: PaymentsService,
+    private readonly mailService: MailService,
   ) {}
 
   private generateOrderNumber(): string {
@@ -157,13 +159,27 @@ export class OrdersService {
   }
 
   async updateStatus(id: string, dto: UpdateOrderStatusDto) {
-    const order = await this.prisma.order.findUnique({ where: { id } });
+    const order = await this.prisma.order.findUnique({
+      where: { id },
+      include: { user: { select: { email: true } } },
+    });
     if (!order) {
       throw new NotFoundException('Order not found');
     }
-    return this.prisma.order.update({
+
+    const updated = await this.prisma.order.update({
       where: { id },
       data: { status: dto.status },
     });
+
+    if (order.user.email) {
+      void this.mailService.sendOrderStatusUpdate(
+        order.user.email,
+        updated.orderNumber,
+        updated.status,
+      );
+    }
+
+    return updated;
   }
 }
