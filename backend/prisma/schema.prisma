@@ -129,11 +129,18 @@ model Customization {
   cut                 String
   size                String?
   notes               String              @default("")
+  customText          String?
+  fontStyle           String?
+  designPreview       String?
+  designConfig        Json?
+  quantity            Int                 @default(1)
   estimatedPriceCents Int?
   status              CustomizationStatus @default(PENDING_REVIEW)
+  addedToBag          Boolean             @default(false)
   urgent              Boolean             @default(false)
   createdAt           DateTime            @default(now())
   updatedAt           DateTime            @updatedAt
+  cartItems           CartItem[]
 
   @@map("customizations")
 }
@@ -160,8 +167,10 @@ model CartItem {
   id          String   @id @default(cuid())
   userId      String
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  productId   String
-  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productId   String?
+  product     Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  customizationId String?
+  customization   Customization? @relation(fields: [customizationId], references: [id], onDelete: Cascade)
   color       String
   colorSwatch String?
   size        String
@@ -170,6 +179,7 @@ model CartItem {
   updatedAt   DateTime @updatedAt
 
   @@unique([userId, productId, color, size])
+  @@unique([userId, customizationId, size])
   @@map("cart_items")
 }
 

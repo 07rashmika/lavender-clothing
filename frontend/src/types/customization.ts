@@ -14,6 +14,11 @@ export interface Customization {
   cut: string;
   size: string | null;
   notes: string;
+  customText?: string | null;
+  fontStyle?: string | null;
+  designPreview?: string | null;
+  designConfig?: Record<string, unknown> | null;
+  quantity?: number;
   estimatedPriceCents: number | null;
   status: CustomizationStatus;
   urgent: boolean;

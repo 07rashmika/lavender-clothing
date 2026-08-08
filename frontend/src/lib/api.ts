@@ -37,7 +37,7 @@ async function apiFetch(path: string, options: RequestInit = {}) {
 
 export const api = {
   get: (path: string) => apiFetch(path),
-  post: (path: string, body?: unknown) =>
+  post: (path: string, body?: unknown, p0?: { headers: { "Content-Type": string; }; }) =>
     apiFetch(path, {
       method: "POST",
       body: body instanceof FormData ? body : body !== undefined ? JSON.stringify(body) : undefined,
