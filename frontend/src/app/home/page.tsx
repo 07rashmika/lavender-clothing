@@ -207,7 +207,7 @@ export default function HomePage() {
                 </div>
                 <div style={s.productInfo}>
                   <p style={s.productName}>{p.name}</p>
-                  <p style={s.productPrice}>${(p.priceCents / 100).toFixed(2)}</p>
+                  <p style={s.productPrice}>LKR {(p.priceCents / 100).toFixed(2)}</p>
                 </div>
               </div>
             ))}
@@ -299,7 +299,7 @@ export default function HomePage() {
               </div>
               <div style={s.productInfo}>
                 <p style={s.productName}>{p.name}</p>
-                <p style={s.productPrice}>${(p.priceCents / 100).toFixed(2)}</p>
+                <p style={s.productPrice}>LKR {(p.priceCents / 100).toFixed(2)}</p>
               </div>
             </div>
           ))}

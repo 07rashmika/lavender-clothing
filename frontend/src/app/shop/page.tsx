@@ -150,7 +150,7 @@ function ShopPageContent() {
 
           <div style={s.filterGroup}>
             <p style={s.filterLabel}>PRICE</p>
-            <p style={s.priceRange}>$20 - $150</p>
+            <p style={s.priceRange}>LKR 20 - LKR 150</p>
           </div>
         </aside>
 

@@ -209,7 +209,7 @@ export default function ProductDetailPage() {
           {/* Accordion */}
           {[
             { key: "fabric", label: "Fabric & Care", content: product.fabric },
-            { key: "shipping", label: "Shipping & Returns", content: "Free standard shipping on orders over $80. Express shipping available. Returns accepted within 30 days of purchase in original condition." },
+            { key: "shipping", label: "Shipping & Returns", content: "Free standard shipping on orders over LKR 80. Express shipping available. Returns accepted within 30 days of purchase in original condition." },
             { key: "sustainability", label: "Sustainability", content: "We are committed to ethical production. All our pieces are made in fair-trade certified facilities using sustainable materials where possible." },
           ].map(item => (
             <div key={item.key} style={s.accordion}>

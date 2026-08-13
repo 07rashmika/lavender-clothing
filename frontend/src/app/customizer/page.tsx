@@ -1002,7 +1002,7 @@ function CustomizerContent() {
             <div style={s.bottomRow}>
               <div>
                 <p style={s.totalLabel}>ESTIMATED TOTAL</p>
-                <p style={s.totalPrice}>${estimatedPrice}.00</p>
+                <p style={s.totalPrice}>LKR {estimatedPrice}.00</p>
               </div>
               <div style={s.qtyAddRow}>
                 <div style={s.qtyWrap}>

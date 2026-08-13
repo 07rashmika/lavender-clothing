@@ -182,7 +182,7 @@ export default function BagPage() {
                           fontSize: 16,
                         }}
                       >
-                        ${(item.price * item.quantity).toFixed(2)}
+                        LKR {(item.price * item.quantity).toFixed(2)}
                       </span>
                     </div>
 
@@ -338,10 +338,10 @@ export default function BagPage() {
 
               <SummaryRow
                 label={`Subtotal (${items.reduce((s, i) => s + i.quantity, 0)} items)`}
-                value={`$${subtotal.toFixed(2)}`}
+                value={`LKR ${subtotal.toFixed(2)}`}
               />
               <SummaryRow label="Shipping" value={shippingNote} />
-              <SummaryRow label="Tax" value={`$${tax.toFixed(2)}`} />
+              <SummaryRow label="Tax" value={`LKR ${tax.toFixed(2)}`} />
 
               <div
                 style={{
@@ -350,7 +350,7 @@ export default function BagPage() {
                   paddingTop: 14,
                 }}
               >
-                <SummaryRow label="Total" value={`$${total.toFixed(2)}`} bold />
+                <SummaryRow label="Total" value={`LKR ${total.toFixed(2)}`} bold />
               </div>
 
               <Button
@@ -388,7 +388,7 @@ export default function BagPage() {
                   marginBottom: 8,
                 }}
               >
-                🚚 Free shipping on orders over ${freeShipThreshold}
+                🚚 Free shipping on orders over LKR {freeShipThreshold}
               </p>
               <p style={{ fontSize: 12, color: colors.textFaint }}>
                 🛡 Secure payment & 30-day easy returns

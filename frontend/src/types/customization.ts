@@ -1,3 +1,5 @@
+import type { DesignLayer, GarmentPart } from "@/app/customizer/Studio";
+
 export type CustomizationStatus =
   | "PENDING_REVIEW"
   | "IN_PRODUCTION"
@@ -17,7 +19,10 @@ export interface Customization {
   customText?: string | null;
   fontStyle?: string | null;
   designPreview?: string | null;
-  designConfig?: Record<string, unknown> | null;
+  designConfig?: {
+    panels?: Partial<Record<GarmentPart, string>>;
+    layers?: DesignLayer[];
+  } | null;
   quantity?: number;
   estimatedPriceCents: number | null;
   status: CustomizationStatus;

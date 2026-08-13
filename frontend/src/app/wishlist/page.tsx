@@ -67,7 +67,7 @@ export default function WishlistPage() {
                     </span>
                   )}
                   <p style={s.name}>{item.name}</p>
-                  <p style={s.price}>${item.price.toFixed(2)}</p>
+                  <p style={s.price}>LKR {item.price.toFixed(2)}</p>
                   <button style={s.moveBtn} onClick={() => moveToBag(item)}>
                     Move to Bag
                   </button>

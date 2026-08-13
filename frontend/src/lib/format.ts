@@ -1,5 +1,5 @@
 export function formatMoney(cents: number): string {
-  return `$${(cents / 100).toFixed(2)}`;
+  return `LKR ${(cents / 100).toFixed(2)}`;
 }
 
 export function productImageUrl(path: string): string {

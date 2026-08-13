@@ -2,7 +2,45 @@
 
 import React, { useEffect, useState } from "react";
 import { api } from "@/lib/api";
+import Canvas3D from "@/app/customizer/Canvas3D";
 import type { Customization, CustomizationStatus } from "@/types/customization";
+import type { GarmentPart } from "@/app/customizer/Studio";
+
+const defaultPanelColors: Record<GarmentPart, string> = {
+  front: "#c8d0f0",
+  back: "#c8d0f0",
+  "left-sleeve": "#c8d0f0",
+  "right-sleeve": "#c8d0f0",
+  collar: "#c8d0f0",
+};
+
+function DesignPreview({ request }: { request: Customization }) {
+  const config = request.designConfig;
+  if (config?.panels || config?.layers) {
+    return (
+      <div style={s.preview3d}>
+        <Canvas3D
+          height="260px"
+          color={request.color || defaultPanelColors.front}
+          panelColors={{ ...defaultPanelColors, ...config.panels }}
+          modelPath="/models/tshirt.glb"
+          material={request.fabric || "Organic Cotton"}
+          layers={config.layers ?? []}
+          resetToken={0}
+        />
+        <span style={s.liveTag}>3D PREVIEW</span>
+      </div>
+    );
+  }
+  if (request.designPreview) {
+    return (
+      <div style={s.previewImgWrap}>
+        <img src={request.designPreview} alt="Design preview" style={s.previewImg} />
+      </div>
+    );
+  }
+  return <p style={s.noPreview}>No preview available for this request.</p>;
+}
 
 const statusOptions: CustomizationStatus[] = [
   "PENDING_REVIEW",
@@ -27,6 +65,7 @@ const statusStyle: Record<CustomizationStatus, React.CSSProperties> = {
 
 export default function CustomizationMonitorPage() {
   const [requests, setRequests] = useState<Customization[]>([]);
+  const [previewId, setPreviewId] = useState<string | null>(null);
 
   useEffect(() => {
     api
@@ -115,6 +154,14 @@ export default function CustomizationMonitorPage() {
                 <p style={{ ...s.detailValue, fontWeight: 400 }}>{r.notes}</p>
               </div>
             )}
+
+            <button
+              style={s.previewToggle}
+              onClick={() => setPreviewId((cur) => (cur === r.id ? null : r.id))}
+            >
+              {previewId === r.id ? "Hide Design Preview" : "Show Design Preview"}
+            </button>
+            {previewId === r.id && <DesignPreview request={r} />}
           </div>
         ))}
         {requests.length === 0 && (
@@ -151,4 +198,25 @@ const s: { [key: string]: React.CSSProperties } = {
   detailValue: { fontSize: 13.5, color: "#3d2e4a", fontWeight: 600, margin: 0 },
 
   notesBox: { marginTop: 14, paddingTop: 14, borderTop: "1px solid #f2eafa" },
+
+  previewToggle: {
+    marginTop: 14, fontSize: 12, fontWeight: 700, color: "#7c5cbf",
+    background: "#f5eefc", border: "none", borderRadius: 20, padding: "7px 14px",
+    cursor: "pointer",
+  },
+  preview3d: {
+    position: "relative", marginTop: 14, minHeight: 260, borderRadius: 14,
+    overflow: "hidden", background: "linear-gradient(145deg,#f1ecf7,#faf8fb)",
+    border: "1px solid #e4dce9",
+  },
+  liveTag: {
+    position: "absolute", top: 10, left: 10, borderRadius: 99, padding: "4px 7px",
+    fontSize: 9, fontWeight: 800, letterSpacing: ".08em", background: "#3a2a5c", color: "#fff",
+  },
+  previewImgWrap: {
+    marginTop: 14, borderRadius: 14, overflow: "hidden", border: "1px solid #e4dce9",
+    background: "#faf8fb",
+  },
+  previewImg: { width: "100%", maxHeight: 320, objectFit: "contain", display: "block" },
+  noPreview: { marginTop: 14, fontSize: 12.5, color: "#a89ab0" },
 };

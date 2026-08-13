@@ -240,7 +240,7 @@ export default function MyDesignsPage() {
                         </div>
                         <div style={s.price}>
                           <small style={s.label}>ESTIMATED TOTAL</small>
-                          <b>${amount.toFixed(2)}</b>
+                          <b>LKR {amount.toFixed(2)}</b>
                         </div>
                       </div>
                       <div style={s.actions}>

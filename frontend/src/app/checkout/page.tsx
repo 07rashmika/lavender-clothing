@@ -435,7 +435,7 @@ function CheckoutForm() {
                   <p style={s.summaryItemName}>{item.name}</p>
                   <p style={s.summaryItemMeta}>{item.color} / {item.size} × {item.quantity}</p>
                 </div>
-                <p style={s.summaryItemPrice}>${(item.price * item.quantity).toFixed(2)}</p>
+                <p style={s.summaryItemPrice}>LKR {(item.price * item.quantity).toFixed(2)}</p>
               </div>
             ))}
 
