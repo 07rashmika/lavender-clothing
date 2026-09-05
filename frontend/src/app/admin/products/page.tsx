@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
-import { formatMoney, formatProductStatus, productImageUrl } from "@/lib/format";
+import { formatMoneyUSD, formatProductStatus, productImageUrl } from "@/lib/format";
 import type { Product } from "@/types/product";
 
 const statusStyle: Record<string, React.CSSProperties> = {
@@ -82,7 +82,7 @@ export default function AdminProductsPage() {
                   </div>
                 </td>
                 <td style={s.td}>{p.category}</td>
-                <td style={s.td}>{formatMoney(p.priceCents)}</td>
+                <td style={s.td}>{formatMoneyUSD(p.priceCents)}</td>
                 <td style={s.td}>{p.stock}</td>
                 <td style={s.td}>
                   <span style={{ ...s.statusPill, ...statusStyle[p.status] }}>

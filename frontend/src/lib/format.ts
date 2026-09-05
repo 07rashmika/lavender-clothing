@@ -2,6 +2,10 @@ export function formatMoney(cents: number): string {
   return `LKR ${(cents / 100).toFixed(2)}`;
 }
 
+export function formatMoneyUSD(cents: number): string {
+  return `$${(cents / 100).toFixed(2)}`;
+}
+
 export function productImageUrl(path: string): string {
   if (path.startsWith("http")) return path;
   if (path.startsWith("/uploads")) return `${process.env.NEXT_PUBLIC_API_URL}${path}`;

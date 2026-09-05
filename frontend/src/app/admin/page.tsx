@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
-import { formatMoney } from "@/lib/format";
+import { formatMoneyUSD } from "@/lib/format";
 import type { Order, OrderStatus } from "@/types/order";
 
 interface DashboardStats {
@@ -40,7 +40,7 @@ export default function AdminDashboard() {
   }, []);
 
   const statCards = [
-    { label: "Total Revenue", value: stats ? formatMoney(stats.totalRevenueCents) : "—", icon: "💰" },
+    { label: "Total Revenue", value: stats ? formatMoneyUSD(stats.totalRevenueCents) : "—", icon: "💰" },
     { label: "Orders Today", value: stats ? String(stats.ordersToday) : "—", icon: "📦" },
     { label: "Active Products", value: stats ? String(stats.activeProducts) : "—", icon: "🛍️" },
     { label: "Pending Customizations", value: stats ? String(stats.pendingCustomizations) : "—", icon: "🎨" },
@@ -88,7 +88,7 @@ export default function AdminDashboard() {
                   <td style={s.td}>
                     <span style={{ ...s.statusPill, ...statusStyle[o.status] }}>{statusLabel[o.status]}</span>
                   </td>
-                  <td style={{ ...s.tdBold, textAlign: "right" }}>{formatMoney(o.totalCents)}</td>
+                  <td style={{ ...s.tdBold, textAlign: "right" }}>{formatMoneyUSD(o.totalCents)}</td>
                 </tr>
               ))}
               {stats && stats.recentOrders.length === 0 && (

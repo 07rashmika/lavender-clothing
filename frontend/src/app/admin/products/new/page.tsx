@@ -111,7 +111,7 @@ export default function AddProductPage() {
           </div>
 
           <div style={s.row2}>
-            <Field label="Price (LKR)" value={form.price} onChange={(v) => set("price", v)} placeholder="89.00" wrapperStyle={{ flex: 1 }} />
+            <Field label="Price ($)" value={form.price} onChange={(v) => set("price", v)} placeholder="89.00" wrapperStyle={{ flex: 1 }} />
             <Field label="Stock Quantity" value={form.stock} onChange={(v) => set("stock", v)} placeholder="24" wrapperStyle={{ flex: 1 }} />
           </div>
 

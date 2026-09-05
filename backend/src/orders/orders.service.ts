@@ -3,7 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { PaymentMethod, Prisma } from '@prisma/client';
+import { OrderStatus, PaymentMethod, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { SettingsService } from '../settings/settings.service';
 import { PaymentsService } from '../payments/payments.service';
@@ -24,6 +24,13 @@ export class OrdersService {
   private generateOrderNumber(): string {
     return `LAV-${Math.floor(1000 + Math.random() * 9000)}`;
   }
+
+  private readonly allowedNextStatuses: Record<OrderStatus, OrderStatus[]> = {
+    PROCESSING: [OrderStatus.SHIPPED, OrderStatus.CANCELLED],
+    SHIPPED: [OrderStatus.DELIVERED, OrderStatus.CANCELLED],
+    DELIVERED: [],
+    CANCELLED: [],
+  };
 
   async create(userId: string, dto: CreateOrderDto) {
     const productIds = [...new Set(dto.items.map((i) => i.productId))];
@@ -165,6 +172,14 @@ export class OrdersService {
     });
     if (!order) {
       throw new NotFoundException('Order not found');
+    }
+
+    if (order.status !== dto.status) {
+      if (!this.allowedNextStatuses[order.status].includes(dto.status)) {
+        throw new BadRequestException(
+          `Cannot change order status from ${order.status} to ${dto.status}`,
+        );
+      }
     }
 
     const updated = await this.prisma.order.update({

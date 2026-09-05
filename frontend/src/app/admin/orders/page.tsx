@@ -2,10 +2,17 @@
 
 import React, { useEffect, useState } from "react";
 import { api } from "@/lib/api";
-import { formatMoney } from "@/lib/format";
+import { formatMoneyUSD } from "@/lib/format";
 import type { Order, OrderStatus } from "@/types/order";
 
 const statusOptions: OrderStatus[] = ["PROCESSING", "SHIPPED", "DELIVERED", "CANCELLED"];
+
+const allowedNextStatuses: Record<OrderStatus, OrderStatus[]> = {
+  PROCESSING: ["SHIPPED", "CANCELLED"],
+  SHIPPED: ["DELIVERED", "CANCELLED"],
+  DELIVERED: [],
+  CANCELLED: [],
+};
 
 const statusLabel: Record<OrderStatus, string> = {
   PROCESSING: "Processing",
@@ -89,17 +96,22 @@ export default function AdminOrdersPage() {
                 <td style={s.td}>{new Date(o.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</td>
                 <td style={s.td}>{o.items.reduce((sum, i) => sum + i.quantity, 0)}</td>
                 <td style={s.td}>{paymentLabel[o.payment]}</td>
-                <td style={{ ...s.tdBold, textAlign: "right", whiteSpace: "nowrap", paddingRight: 40 }}>{formatMoney(o.totalCents)}</td>
+                <td style={{ ...s.tdBold, textAlign: "right", whiteSpace: "nowrap", paddingRight: 40 }}>{formatMoneyUSD(o.totalCents)}</td>
                 <td style={s.td}>
-                  <select
-                    value={o.status}
-                    onChange={(e) => updateStatus(o.id, e.target.value as OrderStatus)}
-                    style={{ ...s.statusSelect, ...statusStyle[o.status] }}
-                  >
-                    {statusOptions.map((opt) => (
-                      <option key={opt} value={opt}>{statusLabel[opt]}</option>
-                    ))}
-                  </select>
+                  {allowedNextStatuses[o.status].length === 0 ? (
+                    <span style={{ ...s.statusBadge, ...statusStyle[o.status] }}>{statusLabel[o.status]}</span>
+                  ) : (
+                    <select
+                      value={o.status}
+                      onChange={(e) => updateStatus(o.id, e.target.value as OrderStatus)}
+                      style={{ ...s.statusSelect, ...statusStyle[o.status] }}
+                    >
+                      <option value={o.status}>{statusLabel[o.status]}</option>
+                      {allowedNextStatuses[o.status].map((opt) => (
+                        <option key={opt} value={opt}>{statusLabel[opt]}</option>
+                      ))}
+                    </select>
+                  )}
                 </td>
               </tr>
             ))}
@@ -137,5 +149,8 @@ const s: { [key: string]: React.CSSProperties } = {
   statusSelect: {
     fontSize: 11.5, fontWeight: 700, padding: "5px 10px", borderRadius: 20, border: "none",
     cursor: "pointer", outline: "none",
+  },
+  statusBadge: {
+    display: "inline-block", fontSize: 11.5, fontWeight: 700, padding: "5px 10px", borderRadius: 20,
   },
 };

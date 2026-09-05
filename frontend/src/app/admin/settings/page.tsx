@@ -95,12 +95,12 @@ export default function AdminSettingsPage() {
           <div style={s.card}>
             <h2 style={s.cardTitle}>Pricing & Checkout</h2>
             <div style={s.row2}>
-              <Field label="Shipping Fee (LKR)" value={shippingFee} onChange={setShippingFee} wrapperStyle={{ flex: 1 }} />
-              <Field label="COD Service Charge (LKR)" value={codFee} onChange={setCodFee} wrapperStyle={{ flex: 1 }} />
+              <Field label="Shipping Fee ($)" value={shippingFee} onChange={setShippingFee} wrapperStyle={{ flex: 1 }} />
+              <Field label="COD Service Charge ($)" value={codFee} onChange={setCodFee} wrapperStyle={{ flex: 1 }} />
             </div>
             <div style={s.row2}>
               <Field label="Tax Rate (%)" value={taxRate} onChange={setTaxRate} wrapperStyle={{ flex: 1 }} />
-              <Field label="Free Shipping Threshold (LKR)" value={freeShipThreshold} onChange={setFreeShipThreshold} wrapperStyle={{ flex: 1 }} />
+              <Field label="Free Shipping Threshold ($)" value={freeShipThreshold} onChange={setFreeShipThreshold} wrapperStyle={{ flex: 1 }} />
             </div>
           </div>
         </div>

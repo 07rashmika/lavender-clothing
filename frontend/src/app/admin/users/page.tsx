@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { api } from "@/lib/api";
-import { formatMoney } from "@/lib/format";
+import { formatMoneyUSD } from "@/lib/format";
 
 interface AdminUser {
   id: string;
@@ -100,7 +100,7 @@ export default function AdminUsersPage() {
                   </td>
                   <td style={s.td}>{new Date(u.createdAt).toLocaleDateString("en-US", { month: "short", year: "numeric" })}</td>
                   <td style={s.td}>{u.orderCount}</td>
-                  <td style={s.td}>{formatMoney(u.totalSpentCents)}</td>
+                  <td style={s.td}>{formatMoneyUSD(u.totalSpentCents)}</td>
                   <td style={s.td}>
                     <span style={{ ...s.tierPill, ...tierStyle[tier] }}>{tier}</span>
                     {u.suspended && <span style={s.suspendedPill}>Suspended</span>}
